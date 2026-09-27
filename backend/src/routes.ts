@@ -11,6 +11,8 @@ import { llmConfigured, llmState } from "./llm/groq.js";
 import { pipeline, triggerNow } from "./pipeline.js";
 import { getTelegram, tgState } from "./telegram/client.js";
 import { addSource } from "./telegram/collector.js";
+import { accountLimits, apifyConfigured, spendThisMonth } from "./x/apify.js";
+import { addSource as addXSource, parseXInput } from "./x/collector.js";
 import { resolveRange } from "./util/range.js";
 
 export const api = Router();
@@ -45,6 +47,13 @@ api.get(
         pausedUntil: llmState.pausedUntil,
         error: llmState.lastError,
       },
+      x: {
+        configured: apifyConfigured(),
+        actor: config.x.actor,
+        spendMonthUsd: Number(spendThisMonth().toFixed(4)),
+        budgetUsd: config.x.monthlyBudgetUsd,
+        account: await accountLimits(),
+      },
       pipeline,
       counts,
     };
@@ -65,7 +74,8 @@ api.post(
   "/sources",
   handle(async (req) => {
     const input = String(req.body?.handle ?? "");
-    const added = await addSource(input);
+    // "x:…" and x.com URLs go to the X collector; everything else is Telegram, as before.
+    const added = parseXInput(input) ? await addXSource(input) : await addSource(input);
     triggerNow();
     return added;
   }),

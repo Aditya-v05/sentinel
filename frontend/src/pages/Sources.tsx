@@ -43,11 +43,12 @@ export default function Sources({ status }: { status: Status | null }) {
     { done: !!tg?.configured, text: "Telegram API ID + hash in backend/.env", hint: "my.telegram.org → API development tools" },
     { done: !!tg?.authorized, text: "Telegram session logged in", hint: "cd backend && npm run telegram:login" },
     { done: !!status?.llm.configured, text: "Groq API key in backend/.env", hint: "console.groq.com/keys" },
-    { done: !!sources?.length, text: "At least one public group or channel added", hint: "Use the form below" },
+    { done: !!status?.x?.configured, text: "Apify token in backend/.env (for X)", hint: "console.apify.com → Settings → Integrations" },
+    { done: !!sources?.length, text: "At least one source added", hint: "Use the form below" },
   ];
 
   return (
-    <Page title="Sources" sub="Public Telegram channels and groups the pipeline collects from." filters={false}>
+    <Page title="Sources" sub="Public Telegram groups, X accounts and X searches the pipeline collects from." filters={false}>
       <div className="grid g2">
         <Card title="Setup">
           {steps.map((s) => (
@@ -62,11 +63,11 @@ export default function Sources({ status }: { status: Status | null }) {
           {tg?.error && <p className="note warn">{tg.error}</p>}
         </Card>
 
-        <Card title="Add a source" note="@username or t.me link">
+        <Card title="Add a source" note="Telegram: @username or t.me link · X: x:@handle, x.com URL, or x:search terms">
           <form onSubmit={submit} style={{ display: "flex", gap: 8 }}>
             <input
               className="input"
-              placeholder="@groupname or https://t.me/channel"
+              placeholder="@groupname · https://t.me/channel · x:@isro · x:chandrayaan"
               value={handle}
               onChange={(e) => setHandle(e.target.value)}
               disabled={busy}
@@ -78,8 +79,8 @@ export default function Sources({ status }: { status: Status | null }) {
           {error && <p className="note neg">{error}</p>}
           {added && <p className="note pos">{added}</p>}
           <p className="note">
-            Groups work best: that's where followers actually talk. For a broadcast channel, its linked discussion group is added
-            automatically.
+            Telegram groups work best: that's where followers actually talk; a broadcast channel brings its discussion group along.
+            An X source collects the account's posts (or the search's results), then the reply threads under the busiest ones.
           </p>
         </Card>
       </div>
@@ -106,10 +107,12 @@ export default function Sources({ status }: { status: Status | null }) {
                   <tr key={s.id}>
                     <td>
                       {s.title}
-                      <div className="mono faint">{s.handle ? "@" + s.handle : "linked group"}</div>
+                      <div className="mono faint">
+                        {s.platform === "x" ? (s.kind === "handle" ? "x.com/" + s.handle : "X search") : s.handle ? "@" + s.handle : "linked group"}
+                      </div>
                     </td>
                     <td>
-                      <span className="tag">{s.kind}</span>
+                      <span className="tag">{s.platform === "x" ? "X · " + s.kind : s.kind}</span>
                     </td>
                     <td className="num">{fmtNum(s.messages)}</td>
                     <td className="muted">{fmtDate(s.first_ts)}</td>
@@ -146,6 +149,19 @@ export default function Sources({ status }: { status: Status | null }) {
               <tr><td className="muted">Authors / profiled</td><td className="num">{fmtNum(status?.counts.users)} / {fmtNum(status?.counts.profiled)}</td></tr>
               <tr><td className="muted">Topics discovered</td><td className="num">{fmtNum(status?.counts.topics)}</td></tr>
               <tr><td className="muted">Model</td><td className="mono">{status?.llm.model}</td></tr>
+              {status?.x?.configured && (
+                <tr>
+                  <td className="muted">Apify spend this month</td>
+                  <td className="num">
+                    ${status.x.spendMonthUsd.toFixed(2)} <span className="faint">of ${status.x.budgetUsd} budget</span>
+                    {status.x.account && (
+                      <div className="faint">
+                        account ${status.x.account.monthlyUsageUsd.toFixed(2)} of ${status.x.account.maxMonthlyUsageUsd} plan
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              )}
               <tr><td className="muted">Next run</td><td className="num">{status?.pipeline.nextRunAt ? fmtDate(status.pipeline.nextRunAt) : "—"}</td></tr>
             </tbody>
           </table>

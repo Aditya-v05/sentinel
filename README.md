@@ -10,7 +10,7 @@ An AI-driven social media analytics framework. It collects public conversations,
 | Who influences whom? | **E. Link analysis & network topology** | Reply / mention / forward graph → PageRank, betweenness, Louvain communities, spread over time |
 | (foundation) | **A. Continuous collection & timeline** | Backfill + incremental sync into a timestamped SQLite history |
 
-**Iteration 1 covers Telegram.** The schema is platform-agnostic (`platform` column, `"<platform>:<id>"` user keys) so X (Twitter) can be added as another collector next. Everything runs on free tiers.
+**Iteration 1 covered Telegram; iteration 2 adds X (Twitter).** The schema is platform-agnostic (`platform` column, `"<platform>:<id>"` user keys), so both write the same tables and every metric works across them. Telegram and the LLM run on free tiers; X runs on Apify credit with a hard monthly budget.
 
 ---
 
@@ -43,6 +43,7 @@ An AI-driven social media analytics framework. It collects public conversations,
 | `TG_API_ID`, `TG_API_HASH` | https://my.telegram.org → log in with your phone → **API development tools** → create an app (platform: Desktop). Copy *App api_id* and *App api_hash*. |
 | `TG_PHONE` | Phone number of the Telegram account used for reading, international format (`+91…`). Prefer an established spare account. |
 | `GROQ_API_KEY` | https://console.groq.com/keys (starts with `gsk_`) |
+| `APIFY_TOKEN` | https://console.apify.com → Settings → Integrations. Needed for X only. The free plan's monthly credit covers roughly 10,000 tweets. |
 
 ### 2. Configure
 
@@ -80,8 +81,32 @@ Open http://localhost:5173 → **Sources** → add a public group or channel: `@
 - **Public groups are best** — that is where followers actually write.
 - Adding a **broadcast channel** automatically adds its linked **discussion group** (if it has one), because channel posts alone contain no audience text.
 - Private invite links (`t.me/+…`) are not supported.
+- **X:** `x:@handle` or an `x.com/handle` URL collects that account's posts; `x:<search terms>` collects a search (X search operators work, e.g. `x:chandrayaan lang:hi`). The busiest posts' reply threads are fetched afterwards, a few per cycle.
 
 The pipeline starts immediately. The first backfill (up to 500 messages per source) takes a few minutes to collect and ~40 messages/min to label on the free tier; afterwards only new messages are processed.
+
+---
+
+## X (Twitter) collection and the demo dataset
+
+There is no free way to read X: the official API's read access starts at about $200 a month. Sentinel collects X through **Apify** (`apidojo/tweet-scraper`, about $0.40 per 1,000 tweets, chosen over the cheaper actors because its thread fetches return only the thread and its language filter takes any ISO code). The actor runs on Apify's side; no X account of ours is involved.
+
+How it spends, and how it stops:
+
+- **First sync** of a source: newest `X_BACKFILL_LIMIT` posts within `BACKFILL_DAYS`. **Later syncs:** only posts newer than the last seen id (`since_id`), so a quiet source costs nothing.
+- **Threads:** posts with replies are queued in `x_threads`; each cycle fetches `X_THREADS_PER_CYCLE` of them, busiest first, `X_THREAD_LIMIT` replies each. Replies are what build the network.
+- **Budget:** every run's cost is read back from Apify into `kv` (`apify_spend_<month>`). Once it reaches `X_MONTHLY_BUDGET_USD` the collector pauses and the Sources page says so; Telegram and the LLM carry on. The page also shows the whole account's usage against its plan.
+
+**Plan for a demo: collect early, snapshot, run from the snapshot.** Add the sources days ahead, let the backfill and threads finish, then
+
+```bash
+cd backend && npm run db:snapshot        # -> data/snapshots/analytics-<date>.db
+DB_FILE=data/snapshots/analytics-<date>.db npm run dev
+```
+
+The demo then runs on data you hold, with live sync on top if the actor is up that morning. Snapshots are git-ignored.
+
+Tweet ids are 64-bit and are written as BigInt; the sync cursor lives in `kv` as a string. Do not read `ext_id` into JavaScript numbers.
 
 ---
 
@@ -116,6 +141,10 @@ backend/
     db.ts                 SQLite schema (CREATE TABLE IF NOT EXISTS), query helpers, scope() filter helper
     pipeline.ts           the background cycle: collect -> bios -> topics -> sentiment -> demographics
     routes.ts             all HTTP endpoints
+    x/
+      apify.ts            Apify runs: start, poll, read cost back, monthly budget guard
+      collector.ts        add X sources, backfill / since_id sync, reply-thread fetch, tweet normalisation
+    snapshot.ts           npm run db:snapshot — consistent copy of the database for a demo
     telegram/
       client.ts           shared GramJS client; connection + auth state
       login.ts            one-time interactive login (npm run telegram:login)
@@ -207,7 +236,8 @@ SQLite file `backend/data/analytics.db` (override with `DB_FILE`). Schema is cre
 | `messages` | the timestamped history + analysis columns | `source_id`, `ext_id`, `author_key`, `text`, `ts` (unix s, UTC), `reply_to_ext_id`, `fwd_from_key`, `views`, `forwards`, `reactions`, `mentions` (JSON), `hashtags` (JSON), `analyzed` (0 pending, 1 done, 2 skipped), `sentiment`, `sentiment_score`, `emotion`, `sarcasm`, `stance`, `topic_id` |
 | `topics` | discovered themes | `label`, `keywords` (JSON), `description`, `created_at` |
 | `profiles` | inferred demographics per user (never exposed individually) | `user_key`, `language`, `region`, `age_bracket`, `interests` (JSON), `profession` |
-| `kv` | small pipeline state | e.g. `topics_source_<id>`, `topics_discovered_at` |
+| `kv` | small pipeline state | e.g. `topics_source_<id>`, `x_since_id_<source>`, `apify_spend_<month>` |
+| `x_threads` | X posts whose replies are worth fetching | `conversation_id`, `source_id`, `reply_count`, `replies_stored`, `fetched_at` |
 
 Useful resets (backend stopped or not — SQLite is WAL):
 - Start over completely: delete `backend/data/analytics.db*` (keep `telegram.session`).
@@ -258,7 +288,11 @@ All in `backend/.env` (see `.env.example`):
 | `ANALYZE_PER_CYCLE` | `200` | messages labelled per cycle |
 | `PROFILE_PER_CYCLE` | `40` | users profiled per cycle |
 | `BIO_FETCH_PER_CYCLE` | `30` | Telegram bios fetched per cycle |
-| `DB_FILE` | `backend/data/analytics.db` | alternative database path |
+| `DB_FILE` | `backend/data/analytics.db` | alternative database path (point it at a snapshot for a demo) |
+| `APIFY_TOKEN`, `APIFY_ACTOR` | —, `apidojo~tweet-scraper` | X collection via Apify |
+| `X_BACKFILL_LIMIT`, `X_SYNC_LIMIT` | `300`, `60` | posts per first sync / per later sync, per source |
+| `X_THREADS_PER_CYCLE`, `X_THREAD_LIMIT` | `3`, `40` | reply threads fetched per cycle, replies per thread |
+| `X_MONTHLY_BUDGET_USD` | `15` | X collection pauses once this month's Apify spend reaches it |
 
 `.env` is read at startup only — restart the backend after editing it (with `npm run dev`, touching any `src` file also restarts it).
 
@@ -314,11 +348,8 @@ Design system (keep it consistent when adding UI):
 
 ## Extending
 
-### Adding X (Twitter) or another platform
-1. Create `backend/src/x/collector.ts` exposing the same shape as the Telegram one: `addSource(input)` and `syncSource(source)`.
-2. Store rows with `platform = 'x'`, user keys `"x:<user id>"`, and the same `messages` columns (`reply_to_ext_id` = replied tweet id, `fwd_from_key` = retweeted/quoted author, `mentions` = mentioned user keys).
-3. Call it from `pipeline.runCycle()` for sources where `platform = 'x'`, and branch `POST /sources` on the input format.
-4. Everything downstream (sentiment, topics, demographics, trends, network, UI) works unchanged because it only reads the shared tables.
+### Adding another platform (Reddit, YouTube, …)
+`backend/src/x/collector.ts` is the template: `addSource(input)` and `syncSource(source)`, rows with `platform = '<name>'`, user keys `"<name>:<id>"`, the same `messages` columns (`reply_to_ext_id` = parent id, `fwd_from_key` = reshared author, `mentions` = user keys). Call it from `pipeline.runCycle()` for its platform and branch `POST /sources` on the input format. Everything downstream works unchanged because it only reads the shared tables.
 
 ### Adding a metric
 Write a read-side function in `analysis/` taking a `Range` (use `scope(r)` for the WHERE clause and `bucketOf` / `bucketStarts` for time series), expose it in `routes.ts`, and add a page/card in `frontend/src/pages`.

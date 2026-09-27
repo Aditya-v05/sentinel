@@ -18,7 +18,7 @@ interface Profiled {
  */
 export async function profileUsers(limit: number, onProgress?: (done: number, total: number) => void) {
   const users = all(
-    `SELECT u.key, u.display_name, u.username, u.bio,
+    `SELECT u.key, u.display_name, u.username, u.bio, u.location,
             (SELECT json_group_array(text) FROM (
                SELECT text FROM messages WHERE author_key = u.key AND analyzed != 2 ORDER BY ts DESC LIMIT 5)) AS samples
        FROM users u
@@ -39,6 +39,7 @@ export async function profileUsers(limit: number, onProgress?: (done: number, to
       name: clip(u.display_name, 60),
       username: u.username ?? "",
       bio: clip(u.bio, 200),
+      ...(u.location ? { location: clip(u.location, 60) } : {}),
       messages: (JSON.parse(u.samples ?? "[]") as string[]).map((t) => clip(t, 160)),
     }));
 
@@ -46,7 +47,7 @@ export async function profileUsers(limit: number, onProgress?: (done: number, to
       "You estimate aggregate audience demographics from public social media signals for anonymised analytics. Make a best guess from names, language, spelling, slang, places and topics; use \"unknown\" only when there is no signal at all. Reply with JSON only.",
       `For each user estimate:
 - language: main language they write in (English name, e.g. "Hindi", "English", "Malayalam")
-- region: most likely country (English name) or "unknown"
+- region: most likely country (English name) or "unknown"; a stated location field is the strongest signal
 - age_bracket: one of ${AGE_BRACKETS.join(", ")}
 - interests: 1-3 of ${INTERESTS.join(", ")}
 - profession: one of ${PROFESSIONS.join(", ")}

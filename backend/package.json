@@ -6,6 +6,7 @@
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "telegram:login": "tsx src/telegram/login.ts",
+    "db:snapshot": "tsx src/snapshot.ts",
     "typecheck": "tsc --noEmit"
   },
   "type": "module",

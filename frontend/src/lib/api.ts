@@ -42,9 +42,10 @@ export function useApi<T = any>(path: string | null, refreshMs?: number) {
 // ---- response shapes (only the fields the UI reads) ----
 export interface Source {
   id: number;
+  platform: "telegram" | "x";
   handle: string | null;
   title: string;
-  kind: "channel" | "group";
+  kind: "channel" | "group" | "handle" | "search";
   linked_source_id: number | null;
   last_synced_at: number | null;
   messages: number;
@@ -55,6 +56,13 @@ export interface Source {
 export interface Status {
   telegram: { configured: boolean; authorized: boolean; error: string };
   llm: { configured: boolean; model: string; pausedUntil: number; error: string };
+  x: {
+    configured: boolean;
+    actor: string;
+    spendMonthUsd: number;
+    budgetUsd: number;
+    account: { monthlyUsageUsd: number; maxMonthlyUsageUsd: number } | null;
+  };
   pipeline: { running: boolean; stage: string; lastRunAt: number; nextRunAt: number; lastError: string; log: { at: number; text: string }[] };
   counts: { sources: number; messages: number; pendingAnalysis: number; users: number; profiled: number; topics: number };
 }

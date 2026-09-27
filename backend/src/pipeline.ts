@@ -6,6 +6,8 @@ import { ensureTopics } from "./analysis/topics.js";
 import { llmAvailable, LlmPausedError, llmState } from "./llm/groq.js";
 import { fetchBios, syncSource } from "./telegram/collector.js";
 import { getTelegram } from "./telegram/client.js";
+import { apifyConfigured, ApifyBudgetError } from "./x/apify.js";
+import { fetchThreads, pendingThreads, syncSource as syncX } from "./x/collector.js";
 
 export const pipeline = {
   running: false,
@@ -55,6 +57,25 @@ export async function runCycle() {
       await fetchBios(config.pipeline.bioFetchPerCycle);
     }
 
+    if (apifyConfigured()) {
+      try {
+        for (const source of all("SELECT * FROM sources WHERE platform = 'x' ORDER BY id")) {
+          note(`Collecting X ${source.title}`);
+          const n = await syncX(source);
+          note(`Collected ${n} new posts from X ${source.title}`);
+        }
+        if (pendingThreads()) {
+          note("Fetching X reply threads");
+          const n = await fetchThreads(config.x.threadsPerCycle);
+          note(`Stored ${n} X replies`);
+        }
+      } catch (e) {
+        // A used-up budget is a state, not a failure: say so and carry on with the LLM work.
+        if (e instanceof ApifyBudgetError) note(`X paused: ${e.message}`);
+        else throw e;
+      }
+    }
+
     await llmStep("Topic discovery", ensureTopics);
     await llmStep("Sentiment analysis", () =>
       analyzeMessages(config.pipeline.analyzePerCycle, (d, t) => (pipeline.stage = `Analysing sentiment ${d}/${t}`)),
@@ -70,7 +91,9 @@ export async function runCycle() {
     pipeline.stage = llmState.lastError ? `idle (${llmState.lastError})` : "idle";
     pipeline.lastRunAt = nowSec();
     // While there is an analysis backlog, come back quickly instead of waiting a full interval.
-    const backlog = Number(get("SELECT COUNT(*) AS n FROM messages WHERE analyzed = 0")?.n ?? 0);
+    // Only an LLM backlog justifies the quick return: without a model configured the backlog
+    // never shrinks, and every quick cycle would fetch more paid X threads for nothing.
+    const backlog = llmAvailable() ? Number(get("SELECT COUNT(*) AS n FROM messages WHERE analyzed = 0")?.n ?? 0) : 0;
     // If Groq paused us, resume right when the pause ends (but never later than the normal interval).
     const normal = pipeline.lastRunAt + config.pipeline.syncIntervalSec;
     const resume = Math.max(pipeline.lastRunAt + 15, Math.ceil(llmState.pausedUntil / 1000) + 1);

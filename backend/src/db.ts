@@ -94,7 +94,27 @@ CREATE TABLE IF NOT EXISTS kv (
   key   TEXT PRIMARY KEY,
   value TEXT
 );
+
+-- X posts whose replies are worth collecting (the reply tree is the network).
+CREATE TABLE IF NOT EXISTS x_threads (
+  conversation_id TEXT PRIMARY KEY,
+  source_id       INTEGER NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+  reply_count     INTEGER NOT NULL DEFAULT 0,
+  replies_stored  INTEGER,
+  seen_at         INTEGER NOT NULL,
+  fetched_at      INTEGER
+);
 `);
+
+// Columns added after iteration 1. ALTER is the one non-additive change SQLite allows cheaply,
+// so an existing analytics.db keeps working without being deleted.
+for (const ddl of ["ALTER TABLE users ADD COLUMN location TEXT", "ALTER TABLE users ADD COLUMN followers INTEGER"]) {
+  try {
+    db.exec(ddl);
+  } catch {
+    // already there
+  }
+}
 
 export type Row = Record<string, any>;
 

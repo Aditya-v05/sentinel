@@ -37,5 +37,15 @@ export const config = {
     profilePerCycle: num(process.env.PROFILE_PER_CYCLE, 40),
     bioFetchPerCycle: num(process.env.BIO_FETCH_PER_CYCLE, 30),
   },
+  x: {
+    apifyToken: process.env.APIFY_TOKEN ?? "",
+    // apidojo/tweet-scraper: $0.40 per 1,000 tweets, exact thread fetches, any language filter.
+    actor: process.env.APIFY_ACTOR || "apidojo~tweet-scraper",
+    backfillLimit: num(process.env.X_BACKFILL_LIMIT, 300),
+    syncLimit: num(process.env.X_SYNC_LIMIT, 60),
+    threadsPerCycle: num(process.env.X_THREADS_PER_CYCLE, 3),
+    threadLimit: num(process.env.X_THREAD_LIMIT, 40),
+    monthlyBudgetUsd: num(process.env.X_MONTHLY_BUDGET_USD, 15),
+  },
   dbFile: process.env.DB_FILE || path.join(DATA_DIR, "analytics.db"),
 };
