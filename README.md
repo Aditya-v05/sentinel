@@ -42,7 +42,8 @@ An AI-driven social media analytics framework. It collects public conversations,
 |---|---|
 | `TG_API_ID`, `TG_API_HASH` | https://my.telegram.org → log in with your phone → **API development tools** → create an app (platform: Desktop). Copy *App api_id* and *App api_hash*. |
 | `TG_PHONE` | Phone number of the Telegram account used for reading, international format (`+91…`). Prefer an established spare account. |
-| `GROQ_API_KEY` | https://console.groq.com/keys (starts with `gsk_`) |
+| `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_CHAT_DEPLOYMENT` | Azure OpenAI, if you have a deployment (used when set). Otherwise: |
+| `GROQ_API_KEY` | https://console.groq.com/keys (starts with `gsk_`) — free tier |
 | `APIFY_TOKEN` | https://console.apify.com → Settings → Integrations. Needed for X only. The free plan's monthly credit covers roughly 10,000 tweets. |
 
 ### 2. Configure
@@ -360,7 +361,7 @@ Write a read-side function in `analysis/` taking a `Range` (use `scope(r)` for t
 
 - **Stack facts:** ESM TypeScript run directly with `tsx` (no build step for the backend). Type-check with `npm run typecheck` (backend) and `npx tsc --noEmit` (frontend). Imports inside `backend/src` use `.js` extensions (NodeNext resolution).
 - **Never commit** `backend/.env`, `backend/data/`, or any `*.session` / `*.db` file.
-- **LLM calls go through `chatJSON()`** in `llm/groq.ts` only — it handles pacing, pauses and JSON parsing. Throw/propagate `LlmPausedError` so the pipeline can skip gracefully.
+- **LLM calls go through `chatJSON()`** in `llm/groq.ts` only — it handles pacing, pauses and JSON parsing, and picks Azure OpenAI or Groq from `config.llm.provider`. Throw/propagate `LlmPausedError` so the pipeline can skip gracefully.
 - **Label values must come from `labels.ts`** and be snapped with `pick()`; free-text labels break aggregation.
 - **SQLite access is synchronous** (`node:sqlite` `DatabaseSync`); wrap multi-row writes in `tx()`. Helpers: `all`, `get`, `run`, `kvGet`, `kvSet`.
 - **graphology packages are CommonJS**; `network.ts` loads them via `createRequire` for correct interop — keep that pattern.

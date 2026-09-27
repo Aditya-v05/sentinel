@@ -23,10 +23,24 @@ export const config = {
     phone: process.env.TG_PHONE ?? "",
     sessionFile: path.join(DATA_DIR, "telegram.session"),
   },
+  // Which model labels messages. Azure OpenAI when its key is set (the deployment used across
+  // our SIH work), otherwise Groq's free tier. Both go through llm/groq.ts chatJSON().
+  llm: {
+    provider: (process.env.LLM_PROVIDER || (process.env.AZURE_OPENAI_API_KEY ? "azure" : "groq")) as "azure" | "groq",
+    tpm: num(process.env.LLM_TPM, process.env.AZURE_OPENAI_API_KEY ? 60000 : 8000),
+  },
+  azure: {
+    endpoint: (process.env.AZURE_OPENAI_ENDPOINT ?? "").replace(/\/+$/, ""),
+    apiKey: process.env.AZURE_OPENAI_API_KEY ?? "",
+    apiVersion: process.env.AZURE_OPENAI_API_VERSION || "2024-10-21",
+    deployment: process.env.AZURE_OPENAI_CHAT_DEPLOYMENT ?? "",
+    // Reasoning deployments spend output tokens thinking; "low" keeps labelling cheap and fast.
+    // Leave empty for a deployment or API version that rejects the parameter.
+    reasoningEffort: process.env.AZURE_REASONING_EFFORT ?? "low",
+  },
   groq: {
     apiKey: process.env.GROQ_API_KEY ?? "",
     model: process.env.GROQ_MODEL || "openai/gpt-oss-20b",
-    tpm: num(process.env.GROQ_TPM, 8000),
     insightsModel: process.env.GROQ_INSIGHTS_MODEL || "openai/gpt-oss-120b",
   },
   pipeline: {

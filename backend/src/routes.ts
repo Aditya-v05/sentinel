@@ -7,7 +7,7 @@ import { network, spread } from "./analysis/network.js";
 import { overview, sentimentTimeline } from "./analysis/timeline.js";
 import { listTopics } from "./analysis/topics.js";
 import { trends } from "./analysis/trends.js";
-import { llmConfigured, llmState } from "./llm/groq.js";
+import { llmConfigured, llmModelName, llmState } from "./llm/groq.js";
 import { pipeline, triggerNow } from "./pipeline.js";
 import { getTelegram, tgState } from "./telegram/client.js";
 import { addSource } from "./telegram/collector.js";
@@ -43,7 +43,7 @@ api.get(
       telegram: tgState,
       llm: {
         configured: llmConfigured(),
-        model: config.groq.model,
+        model: llmModelName(),
         pausedUntil: llmState.pausedUntil,
         error: llmState.lastError,
       },
