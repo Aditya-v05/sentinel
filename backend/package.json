@@ -1,0 +1,30 @@
+{
+  "name": "audience-intel-backend",
+  "version": "1.0.0",
+  "description": "Social media audience analytics API (Telegram first)",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "telegram:login": "tsx src/telegram/login.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "type": "module",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "graphology": "^0.26.0",
+    "graphology-communities-louvain": "^2.0.2",
+    "graphology-metrics": "^2.4.2",
+    "groq-sdk": "^1.6.0",
+    "telegram": "^2.26.22"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.3",
+    "graphology-types": "^0.24.8",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "private": true
+}
