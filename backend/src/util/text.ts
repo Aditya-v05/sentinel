@@ -17,7 +17,18 @@ const STOPWORDS = new Set(
   wanna gotta yet ago per etc year years week weeks month months hour hours minute minutes today tomorrow yesterday
   morning night lot lots bit little big small high low long short part end full kind sure true false free`
     .split(/\s+/)
-    .filter(Boolean),
+    .filter(Boolean)
+    .concat(
+      // Hindi (Devanagari) function words, and the romanised Hinglish forms that fill Indian
+      // feeds. Without these the "rising keywords" list on a Hindi source is "hai", "ke", "ki".
+      `का के की को में है हैं था थे थी हो होगा और या पर से भी नहीं ही तो यह वह ये वो इस उस जो कि क्या कब क्यों कैसे कहां अब तक बहुत सब कुछ
+       कोई हम तुम आप मैं मेरा मेरी तेरा उनका उनकी अपना अपनी लिए साथ बाद फिर बस अरे हाँ नही जी सर भाई
+       hai hain ho hoga ka ke ki ko mein me se par bhi nahi nahin toh yeh yah woh wo ye vo iss uss jo kya kab kyon kyu kaise kahan
+       ab tak bahut bohot sab kuch koi hum tum aap main mera meri tera teri uska uski apna apni liye saath baad phir bas arre haan
+       nahi ji sir bhai yaar acha accha theek thik matlab kar karo karna kiya karte raha rahe rahi gaya gayi wala wale wali
+       ஒரு இது அது என்று மற்றும் இல்லை ஆக என் உன் அவர் நான் நீ இந்த அந்த
+       ഒരു ഇത് അത് എന്ന് ആണ് ഇല്ല ഞാൻ നീ അവൻ അവൾ ഈ ആ`.split(/\s+/).filter(Boolean),
+    ),
 );
 
 /** Lowercased content words (3+ letters, no URLs / numbers / stopwords) plus #hashtags. */

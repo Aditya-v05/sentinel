@@ -10,7 +10,8 @@
     "verify": "tsx src/verify.ts",
     "eval:fetch": "tsx src/eval/fetch.ts",
     "eval": "tsx src/eval/run.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "DB_FILE=:memory: LLM_PROVIDER=mock APP_PASSWORD=test-pass X_MONTHLY_BUDGET_USD=1 APIFY_TOKEN=test node --import tsx --test src/test/*.test.ts"
   },
   "type": "module",
   "dependencies": {
