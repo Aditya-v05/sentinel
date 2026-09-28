@@ -44,11 +44,13 @@ export default function Sources({ status }: { status: Status | null }) {
     { done: !!tg?.authorized, text: "Telegram session logged in", hint: "cd backend && npm run telegram:login" },
     { done: !!status?.llm.configured, text: "Groq API key in backend/.env", hint: "console.groq.com/keys" },
     { done: !!status?.x?.configured, text: "Apify token in backend/.env (for X)", hint: "console.apify.com → Settings → Integrations" },
+    { done: !!status?.reddit?.configured, text: "Reddit script app in backend/.env", hint: "reddit.com/prefs/apps — without it the public feed is used, slowly" },
+    { done: !!status?.youtube?.configured, text: "YouTube Data API key in backend/.env", hint: "Google Cloud console → YouTube Data API v3" },
     { done: !!sources?.length, text: "At least one source added", hint: "Use the form below" },
   ];
 
   return (
-    <Page title="Sources" sub="Public Telegram groups, X accounts and X searches the pipeline collects from." filters={false}>
+    <Page title="Sources" sub="Public Telegram groups, X accounts and searches, subreddits, and YouTube videos or channels." filters={false}>
       <div className="grid g2">
         <Card title="Setup">
           {steps.map((s) => (
@@ -63,11 +65,11 @@ export default function Sources({ status }: { status: Status | null }) {
           {tg?.error && <p className="note warn">{tg.error}</p>}
         </Card>
 
-        <Card title="Add a source" note="Telegram: @username or t.me link · X: x:@handle, x.com URL, or x:search terms">
+        <Card title="Add a source" note="Telegram @name · x:@handle or x:search · r/subreddit · YouTube video or @channel URL">
           <form onSubmit={submit} style={{ display: "flex", gap: 8 }}>
             <input
               className="input"
-              placeholder="@groupname · https://t.me/channel · x:@isro · x:chandrayaan"
+              placeholder="@groupname · x:@isro · x:chandrayaan · r/isro · youtube.com/watch?v=…"
               value={handle}
               onChange={(e) => setHandle(e.target.value)}
               disabled={busy}
@@ -108,11 +110,14 @@ export default function Sources({ status }: { status: Status | null }) {
                     <td>
                       {s.title}
                       <div className="mono faint">
-                        {s.platform === "x" ? (s.kind === "handle" ? "x.com/" + s.handle : "X search") : s.handle ? "@" + s.handle : "linked group"}
+                        {s.platform === "x" ? (s.kind === "handle" ? "x.com/" + s.handle : "X search")
+                          : s.platform === "reddit" ? "reddit.com/r/" + s.handle
+                          : s.platform === "youtube" ? (s.kind === "video" ? "youtu.be/" + s.handle : "youtube.com/" + s.handle)
+                          : s.handle ? "@" + s.handle : "linked group"}
                       </div>
                     </td>
                     <td>
-                      <span className="tag">{s.platform === "x" ? "X · " + s.kind : s.kind}</span>
+                      <span className="tag">{s.platform === "telegram" ? s.kind : `${s.platform === "x" ? "X" : s.platform} · ${s.kind}`}</span>
                     </td>
                     <td className="num">{fmtNum(s.messages)}</td>
                     <td className="muted">{fmtDate(s.first_ts)}</td>

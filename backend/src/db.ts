@@ -95,16 +95,29 @@ CREATE TABLE IF NOT EXISTS kv (
   value TEXT
 );
 
--- X posts whose replies are worth collecting (the reply tree is the network).
-CREATE TABLE IF NOT EXISTS x_threads (
-  conversation_id TEXT PRIMARY KEY,
+-- Posts whose replies are worth collecting (the reply tree is the network). One queue for
+-- every platform that fetches replies as a second step (X conversations, Reddit comments).
+CREATE TABLE IF NOT EXISTS threads (
+  platform        TEXT NOT NULL,
+  conversation_id TEXT NOT NULL,
   source_id       INTEGER NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
   reply_count     INTEGER NOT NULL DEFAULT 0,
   replies_stored  INTEGER,
   seen_at         INTEGER NOT NULL,
-  fetched_at      INTEGER
+  fetched_at      INTEGER,
+  PRIMARY KEY (platform, conversation_id)
 );
+CREATE INDEX IF NOT EXISTS threads_pending ON threads(platform, fetched_at);
 `);
+
+// The X-only queue from iteration 2 folds into the shared one.
+try {
+  db.exec(`INSERT OR IGNORE INTO threads (platform, conversation_id, source_id, reply_count, replies_stored, seen_at, fetched_at)
+           SELECT 'x', conversation_id, source_id, reply_count, replies_stored, seen_at, fetched_at FROM x_threads;
+           DROP TABLE x_threads;`);
+} catch {
+  // no legacy table
+}
 
 // Columns added after iteration 1. ALTER is the one non-additive change SQLite allows cheaply,
 // so an existing analytics.db keeps working without being deleted.

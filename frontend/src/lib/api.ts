@@ -42,10 +42,10 @@ export function useApi<T = any>(path: string | null, refreshMs?: number) {
 // ---- response shapes (only the fields the UI reads) ----
 export interface Source {
   id: number;
-  platform: "telegram" | "x";
+  platform: "telegram" | "x" | "reddit" | "youtube";
   handle: string | null;
   title: string;
-  kind: "channel" | "group" | "handle" | "search";
+  kind: "channel" | "group" | "handle" | "search" | "subreddit" | "video";
   linked_source_id: number | null;
   last_synced_at: number | null;
   messages: number;
@@ -63,6 +63,8 @@ export interface Status {
     budgetUsd: number;
     account: { monthlyUsageUsd: number; maxMonthlyUsageUsd: number } | null;
   };
+  reddit: { configured: boolean; mode: "api" | "feed" };
+  youtube: { configured: boolean };
   pipeline: { running: boolean; stage: string; lastRunAt: number; nextRunAt: number; lastError: string; log: { at: number; text: string }[] };
   counts: { sources: number; messages: number; pendingAnalysis: number; users: number; profiled: number; topics: number };
 }

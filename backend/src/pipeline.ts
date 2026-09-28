@@ -8,6 +8,8 @@ import { fetchBios, syncSource } from "./telegram/collector.js";
 import { getTelegram } from "./telegram/client.js";
 import { apifyConfigured, ApifyBudgetError } from "./x/apify.js";
 import { fetchThreads, pendingThreads, syncSource as syncX } from "./x/collector.js";
+import * as reddit from "./reddit/collector.js";
+import * as youtube from "./youtube/collector.js";
 
 export const pipeline = {
   running: false,
@@ -74,6 +76,29 @@ export async function runCycle() {
         if (e instanceof ApifyBudgetError) note(`X paused: ${e.message}`);
         else throw e;
       }
+    }
+
+    // Reddit and YouTube: free official APIs, so a failure on one source is logged and the
+    // cycle carries on with the next; nothing here can spend money.
+    for (const source of all("SELECT * FROM sources WHERE platform = 'reddit' ORDER BY id")) {
+      try {
+        note(`Collecting ${source.title}`);
+        note(`Collected ${await reddit.syncSource(source)} new posts from ${source.title}`);
+      } catch (e) { note(`${source.title}: ${(e as Error).message}`); }
+    }
+    if (reddit.pendingThreads()) {
+      try { note(`Stored ${await reddit.fetchThreads(config.reddit.threadsPerCycle)} Reddit comments`); }
+      catch (e) { note(`Reddit comments: ${(e as Error).message}`); }
+    }
+    for (const source of all("SELECT * FROM sources WHERE platform = 'youtube' ORDER BY id")) {
+      try {
+        note(`Collecting ${source.title}`);
+        note(`Collected ${await youtube.syncSource(source)} new comments from ${source.title}`);
+      } catch (e) { note(`${source.title}: ${(e as Error).message}`); }
+    }
+    if (youtube.pendingThreads()) {
+      try { note(`Stored ${await youtube.fetchThreads(5)} more YouTube replies`); }
+      catch (e) { note(`YouTube replies: ${(e as Error).message}`); }
     }
 
     await llmStep("Topic discovery", ensureTopics);

@@ -66,5 +66,19 @@ export const config = {
     threadLimit: num(process.env.X_THREAD_LIMIT, 40),
     monthlyBudgetUsd: num(process.env.X_MONTHLY_BUDGET_USD, 15),
   },
+  reddit: {
+    // A "script" app at https://www.reddit.com/prefs/apps gives 100 requests a minute for free.
+    // Without one the collector falls back to the public Atom feeds, which Reddit throttles hard.
+    clientId: process.env.REDDIT_CLIENT_ID ?? "",
+    clientSecret: process.env.REDDIT_CLIENT_SECRET ?? "",
+    userAgent: process.env.REDDIT_USER_AGENT || "sentinel-analytics/0.3 (audience research)",
+    backfillLimit: num(process.env.REDDIT_BACKFILL_LIMIT, 200),
+    threadsPerCycle: num(process.env.REDDIT_THREADS_PER_CYCLE, 5),
+  },
+  youtube: {
+    apiKey: process.env.YOUTUBE_API_KEY ?? "",           // Data API v3, free 10,000 units a day
+    videosPerChannel: num(process.env.YOUTUBE_VIDEOS_PER_CHANNEL, 10),
+    commentsPerVideo: num(process.env.YOUTUBE_COMMENTS_PER_VIDEO, 300),
+  },
   dbFile: process.env.DB_FILE || path.join(DATA_DIR, "analytics.db"),
 };

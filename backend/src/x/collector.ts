@@ -123,8 +123,8 @@ export function storeTweet(source: Row, t: Tweet): boolean {
   // Threads worth fetching later: our own posts with replies we have not collected.
   if (isNew && (t.replyCount ?? 0) > 0 && !t.isRetweet) {
     run(
-      "INSERT OR IGNORE INTO x_threads (source_id, conversation_id, reply_count, seen_at) VALUES (?, ?, ?, ?)",
-      source.id, String(t.conversationId ?? t.id), t.replyCount ?? 0, ts,
+      "INSERT OR IGNORE INTO threads (platform, conversation_id, source_id, reply_count, seen_at) VALUES ('x', ?, ?, ?, ?)",
+      String(t.conversationId ?? t.id), source.id, t.replyCount ?? 0, ts,
     );
   }
   return isNew;
@@ -176,8 +176,8 @@ export async function syncSource(source: Row, onProgress?: (n: number) => void) 
  */
 export async function fetchThreads(limit: number) {
   const pending = all(
-    `SELECT t.*, s.* , t.conversation_id AS cid FROM x_threads t JOIN sources s ON s.id = t.source_id
-      WHERE t.fetched_at IS NULL ORDER BY t.reply_count DESC LIMIT ?`,
+    `SELECT t.*, s.* , t.conversation_id AS cid FROM threads t JOIN sources s ON s.id = t.source_id
+      WHERE t.platform = 'x' AND t.fetched_at IS NULL ORDER BY t.reply_count DESC LIMIT ?`,
     limit,
   );
   let stored = 0;
@@ -189,11 +189,11 @@ export async function fetchThreads(limit: number) {
     });
     tx(() => {
       for (const t of tweets) if (t?.id && storeTweet(p, t)) stored++;
-      run("UPDATE x_threads SET fetched_at = ?, replies_stored = ? WHERE conversation_id = ?", nowSec(),
+      run("UPDATE threads SET fetched_at = ?, replies_stored = ? WHERE platform = 'x' AND conversation_id = ?", nowSec(),
         tweets.filter((t) => t?.id).length, String(p.cid));
     });
   }
   return stored;
 }
 
-export const pendingThreads = () => Number(get("SELECT COUNT(*) AS n FROM x_threads WHERE fetched_at IS NULL")?.n ?? 0);
+export const pendingThreads = () => Number(get("SELECT COUNT(*) AS n FROM threads WHERE platform = 'x' AND fetched_at IS NULL")?.n ?? 0);

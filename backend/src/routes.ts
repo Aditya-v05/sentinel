@@ -14,6 +14,8 @@ import { getTelegram, tgState } from "./telegram/client.js";
 import { addSource } from "./telegram/collector.js";
 import { accountLimits, apifyConfigured, spendThisMonth } from "./x/apify.js";
 import { addSource as addXSource, parseXInput } from "./x/collector.js";
+import { addSource as addRedditSource, parseRedditInput, redditConfigured } from "./reddit/collector.js";
+import { addSource as addYouTubeSource, parseYouTubeInput, youtubeConfigured } from "./youtube/collector.js";
 import { resolveRange } from "./util/range.js";
 
 export const api = Router();
@@ -55,6 +57,8 @@ api.get(
         budgetUsd: config.x.monthlyBudgetUsd,
         account: await accountLimits(),
       },
+      reddit: { configured: redditConfigured(), mode: redditConfigured() ? "api" : "feed" },
+      youtube: { configured: youtubeConfigured() },
       pipeline,
       counts,
     };
@@ -86,8 +90,11 @@ api.post(
   "/sources",
   handle(async (req) => {
     const input = String(req.body?.handle ?? "");
-    // "x:…" and x.com URLs go to the X collector; everything else is Telegram, as before.
-    const added = parseXInput(input) ? await addXSource(input) : await addSource(input);
+    // The input's shape picks the platform; anything unrecognised is a Telegram handle, as before.
+    const added = parseXInput(input) ? await addXSource(input)
+      : parseRedditInput(input) ? await addRedditSource(input)
+      : parseYouTubeInput(input) ? await addYouTubeSource(input)
+      : await addSource(input);
     triggerNow();
     return added;
   }),
