@@ -7,6 +7,78 @@ import { useApi, type Series } from "../lib/api";
 import { useFilters } from "../lib/filters";
 import { capitalize, fmtBucket, fmtDate, fmtScore, toneClass } from "../lib/format";
 
+interface ThreadRow { id: number; text: string; author: string; source: string; platform: string; ts: number; replies: number; labelled: number; scores: number[]; avg: number | null; start: number | null; end: number | null; drift: number | null }
+interface ThreadDetail {
+  root: { id: number; author: string; text: string; ts: number; source: string; platform: string };
+  replies: { id: number; author: string; text: string; ts: number; sentiment: string | null; score: number | null; emotion: string | null; stance: string | null; sarcasm: number | null }[];
+}
+
+/** Sentiment inside single conversations: the thread axis, next to the time axis above. */
+function Threads() {
+  const { qs } = useFilters();
+  const { data } = useApi<ThreadRow[]>(`/threads${qs}`, 60000);
+  const [open, setOpen] = useState<number | null>(null);
+  const { data: detail } = useApi<ThreadDetail>(open ? `/threads/${open}` : null);
+  if (!data?.length) return null;
+  return (
+    <>
+      <div className="section-label">Inside conversations</div>
+      <Card title="Most-discussed posts" note="how replies' sentiment moved from first to last">
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Post</th>
+                <th className="num">Replies</th>
+                <th className="num">Start</th>
+                <th className="num">End</th>
+                <th className="num">Drift</th>
+                <th>Trajectory</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((t) => (
+                <tr key={t.id} className={`click ${open === t.id ? "sel" : ""}`} onClick={() => setOpen(open === t.id ? null : t.id)}>
+                  <td>
+                    {t.text.length > 110 ? t.text.slice(0, 110) + "…" : t.text}
+                    <div className="mono faint">{t.author} · {t.source} · {fmtDate(t.ts)}</div>
+                  </td>
+                  <td className="num">{t.replies}{t.labelled < t.replies ? <span className="faint"> ({t.labelled} labelled)</span> : null}</td>
+                  <td className={`num mono ${toneClass(t.start)}`}>{fmtScore(t.start)}</td>
+                  <td className={`num mono ${toneClass(t.end)}`}>{fmtScore(t.end)}</td>
+                  <td className={`num mono ${toneClass(t.drift)}`}>{t.drift == null ? "—" : (t.drift > 0 ? "+" : "") + t.drift.toFixed(2)}</td>
+                  <td>{t.scores.length >= 2 ? <Spark values={t.scores.map((v) => v + 1)} width={110} height={24} /> : <span className="faint">not labelled yet</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {open && detail && (
+          <div style={{ marginTop: 16 }}>
+            <blockquote className="quote">
+              {detail.root.text}
+              <span className="meta">{detail.root.author} · {detail.root.platform} · {fmtDate(detail.root.ts)}</span>
+            </blockquote>
+            {detail.replies.map((c) => (
+              <div key={c.id} className="bar-row" style={{ gridTemplateColumns: "72px 1fr auto", alignItems: "start" }}>
+                <span className={`mono ${toneClass(c.score)}`}>{fmtScore(c.score)}</span>
+                <span>
+                  {c.text}
+                  <div className="mono faint">{c.author} · {fmtDate(c.ts)}</div>
+                </span>
+                <span className="mono faint" style={{ whiteSpace: "nowrap" }}>
+                  {c.emotion && c.emotion !== "neutral" ? c.emotion : ""}{c.sarcasm ? <span className="accent"> sarcastic</span> : null}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="note">Drift = average score of the last third of replies minus the first third. A conversation that starts supportive and ends hostile shows as a negative drift.</p>
+      </Card>
+    </>
+  );
+}
+
 interface SentimentData extends Series {
   analyzed: number[];
   avgScore: (number | null)[];
@@ -167,6 +239,7 @@ export default function Sentiment() {
             </div>
           </div>
           <p className="note">Avg score in the latest bucket: <span className={toneClass(data.avgScore.at(-1) ?? 0)}>{fmtScore(data.avgScore.at(-1))}</span></p>
+          <Threads />
         </>
       )}
     </Page>

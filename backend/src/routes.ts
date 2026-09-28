@@ -5,6 +5,7 @@ import { coordination, origin } from "./analysis/coordination.js";
 import { demographics } from "./analysis/demographics.js";
 import { insights } from "./analysis/insights.js";
 import { network, spread } from "./analysis/network.js";
+import { thread, threads } from "./analysis/threads.js";
 import { overview, sentimentTimeline } from "./analysis/timeline.js";
 import { listTopics } from "./analysis/topics.js";
 import { trends } from "./analysis/trends.js";
@@ -65,6 +66,8 @@ api.get(
   }),
 );
 
+api.get("/threads", handle((req) => threads(resolveRange(req.query))));
+api.get("/threads/:id", handle((req) => thread(Number(req.params.id))));
 api.get("/coordination", handle((req) => coordination(resolveRange(req.query))));
 api.get(
   "/origin",

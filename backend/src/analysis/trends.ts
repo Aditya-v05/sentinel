@@ -4,22 +4,40 @@ import { tokenize } from "../util/text.js";
 
 const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
 
-/** Least-squares line through the last `window` points; projects `ahead` buckets forward. */
-function forecast(series: number[], ahead = 3, window = 8) {
-  const ys = series.slice(-window);
-  const n = ys.length;
-  if (n < 3) return { slope: 0, next: Array(ahead).fill(ys.at(-1) ?? 0) as number[] };
-  const mx = (n - 1) / 2;
-  const my = sum(ys) / n;
-  let num = 0;
-  let den = 0;
-  ys.forEach((y, x) => {
-    num += (x - mx) * (y - my);
-    den += (x - mx) ** 2;
-  });
-  const slope = den ? num / den : 0;
-  const next = Array.from({ length: ahead }, (_, k) => Math.max(0, +(my + slope * (n - mx + k)).toFixed(2)));
-  return { slope, next };
+/**
+ * Holt's linear exponential smoothing: a level and a trend, each updated with more weight on
+ * recent buckets than old ones, projected `ahead` buckets forward. Still two lines of
+ * arithmetic an analyst can check, but unlike a least-squares line it reacts to the last
+ * few buckets rather than treating a week-old peak as equal evidence.
+ */
+export function forecast(series: number[], ahead = 3, alpha = 0.5, beta = 0.3) {
+  const ys = series.slice(-12);
+  if (ys.length < 3) return { slope: 0, next: Array(ahead).fill(ys.at(-1) ?? 0) as number[] };
+  let level = ys[0];
+  let trend = ys[1] - ys[0];
+  for (let i = 1; i < ys.length; i++) {
+    const prev = level;
+    level = alpha * ys[i] + (1 - alpha) * (level + trend);
+    trend = beta * (level - prev) + (1 - beta) * trend;
+  }
+  const next = Array.from({ length: ahead }, (_, k) => Math.max(0, +(level + trend * (k + 1)).toFixed(2)));
+  return { slope: trend, next };
+}
+
+/**
+ * Burst detection: how many standard deviations the latest bucket sits above the term's own
+ * history. A term that always gets ten mentions an hour is not bursting at twelve; a term
+ * that gets one and suddenly gets nine is. This is the "predict rising trends" signal that
+ * fires before the growth ratio does, because it needs one anomalous bucket, not a quarter
+ * of the window.
+ */
+export function burstScore(series: number[]) {
+  if (series.length < 4) return 0;
+  const latest = series.at(-1)!;
+  const history = series.slice(0, -1);
+  const mean = sum(history) / history.length;
+  const sd = Math.sqrt(sum(history.map((v) => (v - mean) ** 2)) / history.length);
+  return +((latest - mean) / (sd + 0.5)).toFixed(2);   // +0.5: a flat history should not make z infinite
 }
 
 function direction(series: number[], slope: number) {
@@ -66,6 +84,11 @@ export function trends(r: Range) {
     .filter((k) => k.recent >= 3 && k.growthPct > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 15);
+  const bursting = keywords
+    .map((k) => ({ term: k.term, latest: k.series.at(-1)!, baseline: +(sum(k.series.slice(0, -1)) / Math.max(1, n - 1)).toFixed(2), zScore: burstScore(k.series), series: k.series }))
+    .filter((k) => k.latest >= 3 && k.zScore >= 2)
+    .sort((a, b) => b.zScore - a.zScore)
+    .slice(0, 12);
   const top = [...keywords].sort((a, b) => b.total - a.total).slice(0, 15);
 
   // --- topics ---
@@ -119,5 +142,5 @@ export function trends(r: Range) {
     ...s.params,
   );
 
-  return { buckets, bucketSec: r.bucket, forecastBuckets: 3, rising, top, topics, viral };
+  return { buckets, bucketSec: r.bucket, forecastBuckets: 3, forecastMethod: "holt", rising, bursting, top, topics, viral };
 }

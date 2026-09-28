@@ -8,6 +8,7 @@ import { fmtBucket, fmtDate, fmtNum, fmtScore, toneClass } from "../lib/format";
 interface TrendsData extends Series {
   forecastBuckets: number;
   rising: Keyword[];
+  bursting: { term: string; latest: number; baseline: number; zScore: number; series: number[] }[];
   top: Keyword[];
   topics: Topic[];
   viral: { id: number; text: string; ts: number; views: number | null; forwards: number | null; reactions: number | null; replies: number; sentiment: string | null; source: string }[];
@@ -71,7 +72,33 @@ export default function Trends() {
       </div>
 
       <div className="section-label">Keywords</div>
-      <div className="grid g2">
+      <div className="grid g3">
+        <Card title="Bursting in the latest bucket" note="standard deviations above the term's own history">
+          {!data.bursting.length ? (
+            <Empty>No term is spiking beyond its usual level right now.</Empty>
+          ) : (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Keyword</th>
+                  <th className="num">Now</th>
+                  <th className="num">Usual</th>
+                  <th className="num">σ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.bursting.map((k) => (
+                  <tr key={k.term}>
+                    <td className="mono">{k.term}</td>
+                    <td className="num warn">{k.latest}</td>
+                    <td className="num muted">{k.baseline}</td>
+                    <td className="num mono">{k.zScore.toFixed(1)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
         <Card title="Rising now" note="recent quarter of the range vs. before">
           {!data.rising.length ? (
             <Empty>Nothing is spiking right now</Empty>
@@ -148,7 +175,7 @@ function TopicChart({ topic, data, fmt }: { topic: Topic; data: TrendsData; fmt:
         </LineChart>
       </ResponsiveContainer>
       <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-        <Legend items={[{ label: "Observed", fill: "var(--g1)" }, { label: "Linear forecast", fill: "var(--g3)", dashed: true }]} />
+        <Legend items={[{ label: "Observed", fill: "var(--g1)" }, { label: "Forecast (Holt smoothing)", fill: "var(--g3)", dashed: true }]} />
         <span className="mono faint">{topic.keywords.join(" · ")}</span>
       </div>
     </Card>
