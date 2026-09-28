@@ -5,9 +5,13 @@ export const setToken = (t: string) => { try { t ? localStorage.setItem("token",
 
 export class AuthRequired extends Error {}
 
+// Same-origin by default (Vite proxies /api in dev; Vercel rewrites it in production). Set
+// VITE_API_BASE to call a backend on another host directly instead.
+const BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/+$/, "");
+
 export async function api<T = any>(path: string, init?: RequestInit): Promise<T> {
   const token = getToken();
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${BASE}/api${path}`, {
     ...init,
     headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}), ...(init?.headers ?? {}) },
   });
@@ -53,10 +57,10 @@ export function useApi<T = any>(path: string | null, refreshMs?: number) {
 // ---- response shapes (only the fields the UI reads) ----
 export interface Source {
   id: number;
-  platform: "telegram" | "x" | "reddit" | "youtube";
+  platform: "telegram" | "x" | "reddit" | "youtube" | "instagram" | "facebook";
   handle: string | null;
   title: string;
-  kind: "channel" | "group" | "handle" | "search" | "subreddit" | "video";
+  kind: "channel" | "group" | "handle" | "search" | "subreddit" | "video" | "page";
   linked_source_id: number | null;
   last_synced_at: number | null;
   messages: number;

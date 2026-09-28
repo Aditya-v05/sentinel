@@ -4,6 +4,7 @@ import { parseXInput } from "../x/collector.js";
 import { parseRedditInput } from "../reddit/collector.js";
 import { parseYouTubeInput } from "../youtube/collector.js";
 import { base36ToBigInt, fnv64 } from "../util/ids.js";
+import { parseMetaInput } from "../meta/collector.js";
 
 test("X inputs: handle forms, search, and rejections", () => {
   assert.deepEqual(parseXInput("x:@isro"), { kind: "handle", query: "isro" });
@@ -30,4 +31,13 @@ test("ids: base36 is exact and reversible in spirit; fnv64 is stable and positiv
   assert.equal(fnv64("UgxK-abc"), fnv64("UgxK-abc"));
   assert.notEqual(fnv64("UgxK-abc"), fnv64("UgxK-abd"));
   assert.equal(fnv64("anything") >= 0n && fnv64("anything") < 2n ** 63n, true);
+});
+
+test("Instagram and Facebook inputs", () => {
+  assert.deepEqual(parseMetaInput("https://www.instagram.com/isro.dos/"), { platform: "instagram", query: "isro.dos" });
+  assert.deepEqual(parseMetaInput("ig:@isro.dos"), { platform: "instagram", query: "isro.dos" });
+  assert.equal(parseMetaInput("https://www.instagram.com/p/Dc0FmIThO1h/"), null);
+  assert.deepEqual(parseMetaInput("https://www.facebook.com/ISRO/"), { platform: "facebook", query: "ISRO" });
+  assert.deepEqual(parseMetaInput("fb:ISRO"), { platform: "facebook", query: "ISRO" });
+  assert.equal(parseMetaInput("r/isro"), null);
 });

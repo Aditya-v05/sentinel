@@ -25,7 +25,7 @@ export const config = {
     apiId: num(process.env.TG_API_ID, 0),
     apiHash: process.env.TG_API_HASH ?? "",
     phone: process.env.TG_PHONE ?? "",
-    sessionFile: path.join(DATA_DIR, "telegram.session"),
+    sessionFile: process.env.TG_SESSION_FILE || path.join(DATA_DIR, "telegram.session"),
   },
   // Which model labels messages. Azure OpenAI when its key is set (the deployment used across
   // our SIH work), otherwise Groq's free tier. Both go through llm/groq.ts chatJSON().
@@ -69,6 +69,12 @@ export const config = {
     threadsPerCycle: num(process.env.X_THREADS_PER_CYCLE, 3),
     threadLimit: num(process.env.X_THREAD_LIMIT, 40),
     monthlyBudgetUsd: num(process.env.X_MONTHLY_BUDGET_USD, 15),
+  },
+  // Instagram and Facebook public pages, through Apify's own scrapers (same token and budget as X).
+  meta: {
+    postsPerSource: num(process.env.META_POSTS_PER_SOURCE, 12),
+    commentsPerPost: num(process.env.META_COMMENTS_PER_POST, 50),
+    threadsPerCycle: num(process.env.META_THREADS_PER_CYCLE, 2),
   },
   reddit: {
     // A "script" app at https://www.reddit.com/prefs/apps gives 100 requests a minute for free.

@@ -45,7 +45,7 @@ interface Run {
  * Async start + polling rather than the sync endpoint, so a slow run cannot hang a cycle
  * past `timeoutSec`; the actor is aborted if it does.
  */
-export async function runActor<T = Record<string, any>>(input: Record<string, unknown>, timeoutSec = 240): Promise<T[]> {
+export async function runActor<T = Record<string, any>>(input: Record<string, unknown>, timeoutSec = 240, actor = config.x.actor): Promise<T[]> {
   if (!apifyConfigured()) throw new Error("APIFY_TOKEN is not set");
   if (budgetLeft() <= 0) {
     throw new ApifyBudgetError(
@@ -53,7 +53,7 @@ export async function runActor<T = Record<string, any>>(input: Record<string, un
     );
   }
 
-  const started = await call<{ data: Run }>(`/acts/${config.x.actor}/runs?timeout=${timeoutSec}&memory=1024`, {
+  const started = await call<{ data: Run }>(`/acts/${actor}/runs?timeout=${timeoutSec}&memory=1024`, {
     method: "POST",
     body: JSON.stringify(input),
   });

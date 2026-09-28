@@ -10,7 +10,9 @@ An AI-driven social media analytics framework. It collects public conversations,
 | Who influences whom? | **E. Link analysis & network topology** | Reply / mention / forward graph → PageRank, betweenness, Louvain communities, spread over time |
 | (foundation) | **A. Continuous collection & timeline** | Backfill + incremental sync into a timestamped SQLite history |
 
-**Iteration 1 covered Telegram; iteration 2 adds X (Twitter).** The schema is platform-agnostic (`platform` column, `"<platform>:<id>"` user keys), so both write the same tables and every metric works across them. Telegram and the LLM run on free tiers; X runs on Apify credit with a hard monthly budget.
+**Platforms:** Telegram and X (the essentials), Reddit and YouTube (official free APIs), Instagram and Facebook (public pages, via Apify). The schema is platform-agnostic (`platform` column, `"<platform>:<id>"` user keys), so every collector writes the same tables and every metric works across them.
+
+**Beyond the four questions:** an **Integrity** page with coordinated-burst, synchronised-account and amplifier detection and origin tracing for any topic or term; a **tamper-evident collection log** (every message SHA-256 chained, publicly verifiable); an **evaluation harness** that scores the labeller on public labelled tweets; sign-in; a local-model path; and tests.
 
 ---
 
@@ -18,6 +20,9 @@ An AI-driven social media analytics framework. It collects public conversations,
 
 1. [Quick start](#quick-start)
 2. [Architecture](#architecture)
+3. [Integrity: coordination, origin, and the collection log](#integrity)
+4. [Evaluation](#evaluation)
+5. [Hosting](#hosting)
 3. [Repository map](#repository-map)
 4. [Pipeline in detail](#pipeline-in-detail)
 5. [Data model](#data-model)
@@ -111,6 +116,34 @@ Tweet ids are 64-bit and are written as BigInt; the sync cursor lives in `kv` as
 
 ---
 
+## Integrity
+
+**Coordinated bursts** — the same normalised wording (URLs, mentions, hashtags, punctuation stripped) posted as *original* text by three or more accounts; the tightest span in which three distinct accounts posted it is reported, and under ten minutes is the tell. **Synchronised pairs** — accounts that keep posting in the same minute. **Amplifiers** — accounts that mostly reshare, repeat themselves, or were created shortly before they got busy (X exposes creation dates). **Origin** — for a topic or a term: the first voices, and the delay before each platform, source and audience segment first carried it, plus who carried it furthest. None of this is a model; every row is a count or a timestamp an analyst can check. Endpoints: `GET /coordination`, `GET /origin?topic=|term=`.
+
+**Collection log.** At the end of every collection step, new rows are sealed: `entry_hash = SHA-256(id, source, ext_id, author, text, ts, collected_at, prev_hash)`, chained in id order. `GET /integrity/verify` (no sign-in) and `npm run verify` walk the log and name the first row where it parts — an edited text, a deleted row, or an inserted one. Sources are soft-deleted so their rows stay sealed. What this proves is that the dashboard shows what was collected, and when; it cannot prove what the platform showed.
+
+**Sentiment inside threads.** `GET /threads` lists the most-discussed posts with their replies' sentiment trajectory (start, end, drift); `GET /threads/:id` returns one conversation in order. Shown at the bottom of the Sentiment page.
+
+**Trend prediction.** Topic forecasts use Holt's linear exponential smoothing; keywords carry a burst score (standard deviations of the latest bucket above the term's own history), shown as "Bursting" on the Trends page.
+
+---
+
+## Evaluation
+
+`npm run eval:fetch` downloads fixed-seed samples of the TweetEval sentiment, emotion, irony and stance test sets. `npm run eval` labels them through the same code path as the pipeline (`labelTexts()` in `analysis/sentiment.ts`) and reports accuracy and macro-F1 per dimension against majority-class and AFINN-lexicon baselines; `npm run eval -- --check` fails when a metric is below `eval/thresholds.json`. See `eval/README.md`. Set the thresholds from your first real run and only ever raise them.
+
+`npm test` runs the unit tests (in-memory database, mock model).
+
+**Models.** `chatJSON()` picks a provider: Azure OpenAI when `AZURE_OPENAI_*` are set, `LLM_PROVIDER=ollama` for a local model through Ollama (nothing leaves the machine), Groq's free tier otherwise, `mock` for tests. The harness scores whichever is configured, so "on-premise" is a measured option, not a promise.
+
+---
+
+## Hosting
+
+Backend on Railway (or any Node host): root `railway.json` builds and starts from `backend/`; mount a volume and set `DB_FILE=/data/analytics.db`, `TG_SESSION_FILE=/data/telegram.session`, `APP_PASSWORD`, and the collector keys. Frontend on Vercel: `frontend/vercel.json` rewrites `/api/*` to the backend host (edit the placeholder) and serves the SPA; alternatively set `VITE_API_BASE` at build time. Collect ahead of the demo and run from a snapshot (`npm run db:snapshot`).
+
+---
+
 ## Architecture
 
 ```
@@ -142,9 +175,16 @@ backend/
     db.ts                 SQLite schema (CREATE TABLE IF NOT EXISTS), query helpers, scope() filter helper
     pipeline.ts           the background cycle: collect -> bios -> topics -> sentiment -> demographics
     routes.ts             all HTTP endpoints
+    auth.ts               APP_PASSWORD -> HMAC session tokens; requireAuth middleware
+    chain.ts              the tamper-evident collection log: sealNew(), verify()
+    eval/                 fetch.ts (TweetEval samples), run.ts (score the labeller, --check thresholds)
+    test/                 node:test suites (npm test)
     x/
       apify.ts            Apify runs: start, poll, read cost back, monthly budget guard
       collector.ts        add X sources, backfill / since_id sync, reply-thread fetch, tweet normalisation
+    reddit/collector.ts   subreddits: OAuth API or public feed; posts + comment trees
+    youtube/collector.ts  videos and channels through the Data API v3; comments + replies
+    meta/collector.ts     Instagram profiles and Facebook pages through Apify; posts + comments
     snapshot.ts           npm run db:snapshot — consistent copy of the database for a demo
     telegram/
       client.ts           shared GramJS client; connection + auth state
@@ -160,6 +200,9 @@ backend/
       timeline.ts         overview + sentiment time series (read side)
       trends.ts           keyword trends, topic series, forecasts, viral posts (read side)
       network.ts          interaction graph, PageRank, betweenness, Louvain, spread (read side)
+      coordination.ts     bursts, synchronised pairs, amplifiers, origin tracing (read side)
+      threads.ts          sentiment trajectory inside single conversations (read side)
+      users.ts            display labels for user keys
       insights.ts         LLM-written briefing from computed metrics (read side, on demand)
     util/
       range.ts            ?source=&days= -> time window + bucket size
@@ -176,7 +219,7 @@ frontend/
     lib/filters.tsx       global source + time-range filter (persisted in localStorage)
     lib/format.ts         number/date formatting, semantic tone classes
     components/ui.tsx     Page, Card, Stat, BarList, Spark (sparkline), ChartTip, Legend
-    pages/                Overview, Sentiment, Audience, Trends, Network, Sources
+    pages/                Overview, Sentiment, Audience, Trends, Network, Integrity, Sources, Login
 ```
 
 ---
@@ -266,6 +309,12 @@ Base: `http://localhost:4000/api`. All dashboard endpoints accept `?days=1|7|30|
 | `GET /network` | graph nodes/edges (top 400), influencers, communities |
 | `GET /network/spread?topic=<id>` | per-community volume + sentiment over time for a topic (or all messages) |
 | `POST /insights` | LLM briefing `{headline, bullets[]}` for the current filters |
+| `GET /coordination` | bursts, synchronised pairs, amplifiers |
+| `GET /origin?topic=<id>` or `?term=<text>` | first voices; arrival delay per platform, source, segment; carriers |
+| `GET /threads`, `GET /threads/:id` | most-discussed posts with sentiment trajectory; one conversation |
+| `GET /integrity/verify` | collection-log status (public) |
+| `POST /auth/login` `{"password"}` | session token when `APP_PASSWORD` is set |
+| `GET /health` | liveness (public) |
 
 Every time-series response carries `buckets` (unix start of each bucket) and `bucketSec`.
 
@@ -332,7 +381,8 @@ Design system (keep it consistent when adding UI):
 - Demographics are exposed **only as aggregates**; any bucket with fewer than 3 people is folded into "other". Per-user profiles never leave the backend.
 - The AI briefing sends only computed metrics to the LLM.
 - Secrets live in `backend/.env` and `backend/data/telegram.session`, both git-ignored (see root `.gitignore`). If a session file leaks, terminate it in Telegram → Settings → Devices.
-- The API has no authentication — it is meant to run locally. Don't expose port 4000 publicly as-is.
+- Set `APP_PASSWORD` on any host; without it the API is open (the sidebar says so).
+- The collection log makes edits and deletions detectable after the fact; it does not stop them. Keep the database file's permissions tight.
 
 ---
 

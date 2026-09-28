@@ -50,7 +50,7 @@ export default function Sources({ status }: { status: Status | null }) {
   ];
 
   return (
-    <Page title="Sources" sub="Public Telegram groups, X accounts and searches, subreddits, and YouTube videos or channels." filters={false}>
+    <Page title="Sources" sub="Public Telegram groups, X accounts and searches, subreddits, YouTube videos or channels, Instagram profiles and Facebook pages." filters={false}>
       <div className="grid g2">
         <Card title="Setup">
           {steps.map((s) => (
@@ -65,7 +65,7 @@ export default function Sources({ status }: { status: Status | null }) {
           {tg?.error && <p className="note warn">{tg.error}</p>}
         </Card>
 
-        <Card title="Add a source" note="Telegram @name · x:@handle or x:search · r/subreddit · YouTube video or @channel URL">
+        <Card title="Add a source" note="Telegram @name · x:@handle or x:search · r/subreddit · YouTube URL · instagram.com/user · facebook.com/page">
           <form onSubmit={submit} style={{ display: "flex", gap: 8 }}>
             <input
               className="input"
@@ -113,6 +113,8 @@ export default function Sources({ status }: { status: Status | null }) {
                         {s.platform === "x" ? (s.kind === "handle" ? "x.com/" + s.handle : "X search")
                           : s.platform === "reddit" ? "reddit.com/r/" + s.handle
                           : s.platform === "youtube" ? (s.kind === "video" ? "youtu.be/" + s.handle : "youtube.com/" + s.handle)
+                          : s.platform === "instagram" ? "instagram.com/" + s.handle
+                          : s.platform === "facebook" ? "facebook.com/" + s.handle
                           : s.handle ? "@" + s.handle : "linked group"}
                       </div>
                     </td>

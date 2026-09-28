@@ -17,6 +17,7 @@ import { getTelegram, tgState } from "./telegram/client.js";
 import { addSource } from "./telegram/collector.js";
 import { accountLimits, apifyConfigured, spendThisMonth } from "./x/apify.js";
 import { addSource as addXSource, parseXInput } from "./x/collector.js";
+import { addSource as addMetaSource, parseMetaInput } from "./meta/collector.js";
 import { addSource as addRedditSource, parseRedditInput, redditConfigured } from "./reddit/collector.js";
 import { addSource as addYouTubeSource, parseYouTubeInput, youtubeConfigured } from "./youtube/collector.js";
 import { resolveRange } from "./util/range.js";
@@ -117,6 +118,7 @@ api.post(
     const added = parseXInput(input) ? await addXSource(input)
       : parseRedditInput(input) ? await addRedditSource(input)
       : parseYouTubeInput(input) ? await addYouTubeSource(input)
+      : parseMetaInput(input) ? await addMetaSource(input)
       : await addSource(input);
     triggerNow();
     return added;

@@ -9,6 +9,7 @@ import { getTelegram } from "./telegram/client.js";
 import { sealNew } from "./chain.js";
 import { apifyConfigured, ApifyBudgetError } from "./x/apify.js";
 import { fetchThreads, pendingThreads, syncSource as syncX } from "./x/collector.js";
+import * as meta from "./meta/collector.js";
 import * as reddit from "./reddit/collector.js";
 import * as youtube from "./youtube/collector.js";
 
@@ -72,6 +73,11 @@ export async function runCycle() {
           const n = await fetchThreads(config.x.threadsPerCycle);
           note(`Stored ${n} X replies`);
         }
+        for (const source of all("SELECT * FROM sources WHERE platform IN ('instagram','facebook') AND removed_at IS NULL ORDER BY id")) {
+          note(`Collecting ${source.platform} ${source.title}`);
+          note(`Collected ${await meta.syncSource(source)} new items from ${source.platform} ${source.title}`);
+        }
+        if (meta.pendingThreads()) note(`Stored ${await meta.fetchThreads(config.meta.threadsPerCycle)} Instagram/Facebook comments`);
       } catch (e) {
         // A used-up budget is a state, not a failure: say so and carry on with the LLM work.
         if (e instanceof ApifyBudgetError) note(`X paused: ${e.message}`);
