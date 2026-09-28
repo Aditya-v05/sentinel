@@ -28,14 +28,30 @@ interface OriginData extends Series {
 
 const span = (sec: number) => (sec < 60 ? `${sec}s` : sec < 3600 ? `${Math.round(sec / 60)} min` : sec < 86400 ? `${(sec / 3600).toFixed(1)} h` : `${(sec / 86400).toFixed(1)} d`);
 
+interface ChainStatus { entries: number; intact: boolean; brokenAt: number | null; reason: string; unsealed: number; head: string | null }
+
 export default function Integrity() {
   const { qs } = useFilters();
   const { data, error } = useApi<CoordinationData>(`/coordination${qs}`, 60000);
   const { data: topics } = useApi<Topic[]>("/topics");
+  const { data: chain } = useApi<ChainStatus>("/integrity/verify", 60000);
 
   return (
     <Page title="Integrity" sub="Coordinated posting, synchronised accounts, amplifiers, and where a narrative started.">
       <ErrorBox error={error} />
+      {chain && (
+        <Card
+          title="Collection log"
+          note={chain.intact ? <span className="pos">intact · {fmtNum(chain.entries)} sealed entries{chain.unsealed ? ` · ${chain.unsealed} awaiting seal` : ""}</span> : <span className="neg">broken at row {chain.brokenAt ?? "end"}</span>}
+        >
+          <p className="note" style={{ margin: 0 }}>
+            {chain.intact
+              ? "Every stored message is sealed with a SHA-256 over its content and the seal before it. Altering, removing or inserting a row breaks every seal after it. This check needs no sign-in, so anyone can run it against this instance."
+              : chain.reason}
+            {chain.head && <span className="mono faint"> · head {chain.head.slice(0, 16)}…</span>}
+          </p>
+        </Card>
+      )}
       {data && (
         <>
           <div className="grid g4">

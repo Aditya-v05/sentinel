@@ -1,11 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
 
+export const getToken = () => { try { return localStorage.getItem("token") ?? ""; } catch { return ""; } };
+export const setToken = (t: string) => { try { t ? localStorage.setItem("token", t) : localStorage.removeItem("token"); } catch { /* no storage */ } };
+
+export class AuthRequired extends Error {}
+
 export async function api<T = any>(path: string, init?: RequestInit): Promise<T> {
+  const token = getToken();
   const res = await fetch(`/api${path}`, {
     ...init,
-    headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
+    headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}), ...(init?.headers ?? {}) },
   });
   const body = await res.json().catch(() => ({}));
+  if (res.status === 401 && !path.startsWith("/auth/")) {
+    setToken("");
+    window.dispatchEvent(new Event("auth:required"));
+    throw new AuthRequired("sign in required");
+  }
   if (!res.ok) throw new Error(body.error ?? `Request failed (${res.status})`);
   return body as T;
 }
@@ -56,6 +67,7 @@ export interface Source {
 export interface Status {
   telegram: { configured: boolean; authorized: boolean; error: string };
   llm: { configured: boolean; model: string; pausedUntil: number; error: string };
+  auth: "password" | "open";
   x: {
     configured: boolean;
     actor: string;

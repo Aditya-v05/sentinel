@@ -6,6 +6,7 @@ import { ensureTopics } from "./analysis/topics.js";
 import { llmAvailable, LlmPausedError, llmState } from "./llm/groq.js";
 import { fetchBios, syncSource } from "./telegram/collector.js";
 import { getTelegram } from "./telegram/client.js";
+import { sealNew } from "./chain.js";
 import { apifyConfigured, ApifyBudgetError } from "./x/apify.js";
 import { fetchThreads, pendingThreads, syncSource as syncX } from "./x/collector.js";
 import * as reddit from "./reddit/collector.js";
@@ -49,7 +50,7 @@ export async function runCycle() {
   pipeline.lastError = "";
   try {
     if (await getTelegram()) {
-      for (const source of all("SELECT * FROM sources WHERE platform = 'telegram' ORDER BY id")) {
+      for (const source of all("SELECT * FROM sources WHERE platform = 'telegram' AND removed_at IS NULL ORDER BY id")) {
         const name = source.handle ? "@" + source.handle : source.title;
         note(`Collecting ${name}`);
         const n = await syncSource(source, (c) => (pipeline.stage = `Collecting ${name}: ${c} messages`));
@@ -61,7 +62,7 @@ export async function runCycle() {
 
     if (apifyConfigured()) {
       try {
-        for (const source of all("SELECT * FROM sources WHERE platform = 'x' ORDER BY id")) {
+        for (const source of all("SELECT * FROM sources WHERE platform = 'x' AND removed_at IS NULL ORDER BY id")) {
           note(`Collecting X ${source.title}`);
           const n = await syncX(source);
           note(`Collected ${n} new posts from X ${source.title}`);
@@ -80,7 +81,7 @@ export async function runCycle() {
 
     // Reddit and YouTube: free official APIs, so a failure on one source is logged and the
     // cycle carries on with the next; nothing here can spend money.
-    for (const source of all("SELECT * FROM sources WHERE platform = 'reddit' ORDER BY id")) {
+    for (const source of all("SELECT * FROM sources WHERE platform = 'reddit' AND removed_at IS NULL ORDER BY id")) {
       try {
         note(`Collecting ${source.title}`);
         note(`Collected ${await reddit.syncSource(source)} new posts from ${source.title}`);
@@ -90,7 +91,7 @@ export async function runCycle() {
       try { note(`Stored ${await reddit.fetchThreads(config.reddit.threadsPerCycle)} Reddit comments`); }
       catch (e) { note(`Reddit comments: ${(e as Error).message}`); }
     }
-    for (const source of all("SELECT * FROM sources WHERE platform = 'youtube' ORDER BY id")) {
+    for (const source of all("SELECT * FROM sources WHERE platform = 'youtube' AND removed_at IS NULL ORDER BY id")) {
       try {
         note(`Collecting ${source.title}`);
         note(`Collected ${await youtube.syncSource(source)} new comments from ${source.title}`);
@@ -100,6 +101,9 @@ export async function runCycle() {
       try { note(`Stored ${await youtube.fetchThreads(5)} more YouTube replies`); }
       catch (e) { note(`YouTube replies: ${(e as Error).message}`); }
     }
+
+    const sealed = sealNew();
+    if (sealed) note(`Sealed ${sealed} new entries into the collection log`);
 
     await llmStep("Topic discovery", ensureTopics);
     await llmStep("Sentiment analysis", () =>

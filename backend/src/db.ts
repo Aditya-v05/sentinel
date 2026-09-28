@@ -125,6 +125,10 @@ for (const ddl of [
   "ALTER TABLE users ADD COLUMN location TEXT",
   "ALTER TABLE users ADD COLUMN followers INTEGER",
   "ALTER TABLE users ADD COLUMN account_created INTEGER",   // unix s; X profiles carry it, Telegram does not
+  "ALTER TABLE sources ADD COLUMN removed_at INTEGER",       // soft delete: rows stay so the collection log stays whole
+  "ALTER TABLE messages ADD COLUMN collected_at INTEGER",
+  "ALTER TABLE messages ADD COLUMN prev_hash TEXT",
+  "ALTER TABLE messages ADD COLUMN entry_hash TEXT",
 ]) {
   try {
     db.exec(ddl);
@@ -132,6 +136,8 @@ for (const ddl of [
     // already there
   }
 }
+
+db.exec("CREATE INDEX IF NOT EXISTS messages_unsealed ON messages(id) WHERE entry_hash IS NULL");
 
 export type Row = Record<string, any>;
 
@@ -159,7 +165,8 @@ export const nowSec = () => Math.floor(Date.now() / 1000);
 
 /** Common WHERE clause for the dashboard's source + time-range filters (alias m = messages). */
 export function scope(q: { source?: number; from: number; to: number }) {
-  const where = ["m.ts >= ?", "m.ts <= ?"];
+  // Removed sources keep their rows (the collection log must stay whole) but leave every view.
+  const where = ["m.ts >= ?", "m.ts <= ?", "m.source_id IN (SELECT id FROM sources WHERE removed_at IS NULL)"];
   const params: SQLInputValue[] = [q.from, q.to];
   if (q.source) {
     where.push("m.source_id = ?");

@@ -1,4 +1,6 @@
 import { Router, type Request, type Response } from "express";
+import { authEnabled, login } from "./auth.js";
+import { verify as verifyChain } from "./chain.js";
 import { config } from "./config.js";
 import { all, get, run } from "./db.js";
 import { coordination, origin } from "./analysis/coordination.js";
@@ -32,6 +34,22 @@ const handle =
     }
   };
 
+api.get("/health", handle(() => ({ ok: true, auth: authEnabled() ? "password" : "open" })));
+
+api.post(
+  "/auth/login",
+  handle((req, res) => {
+    const token = authEnabled() ? login(String(req.body?.password ?? "")) : "";
+    if (authEnabled() && !token) {
+      res.status(401).json({ error: "wrong password" });
+      return;
+    }
+    return { token, expiresInSec: 12 * 3600 };
+  }),
+);
+
+api.get("/integrity/verify", handle(() => verifyChain()));
+
 api.get(
   "/status",
   handle(async () => {
@@ -58,6 +76,7 @@ api.get(
         budgetUsd: config.x.monthlyBudgetUsd,
         account: await accountLimits(),
       },
+      auth: authEnabled() ? "password" : "open",
       reddit: { configured: redditConfigured(), mode: redditConfigured() ? "api" : "feed" },
       youtube: { configured: youtubeConfigured() },
       pipeline,
@@ -85,6 +104,7 @@ api.get(
     all(`SELECT s.id, s.platform, s.handle, s.title, s.kind, s.linked_source_id, s.last_synced_at, s.added_at,
                 COUNT(m.id) AS messages, MIN(m.ts) AS first_ts, MAX(m.ts) AS last_ts
            FROM sources s LEFT JOIN messages m ON m.source_id = s.id
+          WHERE s.removed_at IS NULL
           GROUP BY s.id ORDER BY s.id`),
   ),
 );
@@ -106,7 +126,8 @@ api.post(
 api.delete(
   "/sources/:id",
   handle((req) => {
-    run("DELETE FROM sources WHERE id = ?", Number(req.params.id));
+    // Soft delete. The messages stay, sealed in the collection log, and leave every view.
+    run("UPDATE sources SET removed_at = ? WHERE id = ?", Math.floor(Date.now() / 1000), Number(req.params.id));
     return { ok: true };
   }),
 );

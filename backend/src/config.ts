@@ -17,6 +17,10 @@ export const DATA_DIR = path.join(ROOT_DIR, "data");
 
 export const config = {
   port: num(process.env.PORT, 4000),
+  auth: {
+    password: process.env.APP_PASSWORD ?? "",      // empty = API open (local demo only)
+    secret: process.env.APP_SECRET ?? "",          // optional; derived from the password when unset
+  },
   tg: {
     apiId: num(process.env.TG_API_ID, 0),
     apiHash: process.env.TG_API_HASH ?? "",

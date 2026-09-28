@@ -7,6 +7,7 @@
     "start": "tsx src/server.ts",
     "telegram:login": "tsx src/telegram/login.ts",
     "db:snapshot": "tsx src/snapshot.ts",
+    "verify": "tsx src/verify.ts",
     "eval:fetch": "tsx src/eval/fetch.ts",
     "eval": "tsx src/eval/run.ts",
     "typecheck": "tsc --noEmit"
