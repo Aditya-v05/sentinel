@@ -56,10 +56,53 @@ export async function analyzeMessages(limit: number, onProgress?: (done: number,
       text: clip(m.text, 300),
       ...(m.parent_text ? { in_reply_to: clip(m.parent_text, 120) } : {}),
     }));
+    const byIndex = await labelTexts(items, topicList);
+    tx(() => {
+      batch.forEach((m, i) => {
+        const r = byIndex.get(i);
+        if (!r) return run("UPDATE messages SET analyzed = 2 WHERE id = ?", m.id);
+        run(
+          `UPDATE messages SET analyzed = 1, sentiment = ?, sentiment_score = ?, emotion = ?, sarcasm = ?, stance = ?, topic_id = ?
+            WHERE id = ?`,
+          r.sentiment, r.score, r.emotion, r.sarcasm, r.stance, topicIds.has(r.topic) ? r.topic : null, m.id,
+        );
+      });
+    });
+  };
 
-    const res = await chatJSON<Labelled>(
-      "You are an expert social media analyst who labels messages precisely, including sarcasm and irony. Messages may be in any language. Reply with JSON only.",
-      `Label every message below.
+  let done = 0;
+  for (let start = 0; start < pending.length; start += BATCH) {
+    const batch = pending.slice(start, start + BATCH);
+    await label(batch);
+    done += batch.length;
+    onProgress?.(done, pending.length);
+  }
+  return done;
+}
+
+export interface LabelItem {
+  i: number;
+  text: string;
+  in_reply_to?: string;
+}
+export interface Label {
+  sentiment: (typeof SENTIMENTS)[number];
+  score: number;
+  emotion: (typeof EMOTIONS)[number];
+  sarcasm: 0 | 1;
+  stance: (typeof STANCES)[number];
+  topic: number;
+}
+
+/**
+ * The labelling call itself, shared by the pipeline and the evaluation harness so the
+ * number the harness reports is the number the product runs on. Values are snapped onto
+ * the fixed vocabularies; an item the model skipped is absent from the map.
+ */
+export async function labelTexts(items: LabelItem[], topicList = "(no topics yet — always use 0)"): Promise<Map<number, Label>> {
+  const res = await chatJSON<Labelled>(
+    "You are an expert social media analyst who labels messages precisely, including sarcasm and irony. Messages may be in any language. Reply with JSON only.",
+    `Label every message below.
 
 Fields per message:
 - sentiment: one of ${SENTIMENTS.join(", ")}  (sarcastic praise counts as negative)
@@ -78,33 +121,20 @@ ${JSON.stringify(items)}
 
 Return one compact row per message, in this exact order: [i, sentiment, score, emotion, sarcasm (1 or 0), stance, topic]
 Example: {"r":[[0,"negative",-0.6,"anger",1,"against",3],[1,"positive",0.8,"joy",0,"supportive",0]]}`,
-      { maxTokens: 2000 },
-    );
+    { maxTokens: 2000 },
+  );
 
-    const byIndex = new Map((Array.isArray(res.r) ? res.r : []).filter(Array.isArray).map((r) => [Number(r[0]), r]));
-    tx(() => {
-      batch.forEach((m, i) => {
-        const r = byIndex.get(i);
-        if (!r) return run("UPDATE messages SET analyzed = 2 WHERE id = ?", m.id);
-        const [, sentiment, rawScore, emotion, sarcasm, stance, topic] = r;
-        const score = Math.max(-1, Math.min(1, Number(rawScore) || 0));
-        run(
-          `UPDATE messages SET analyzed = 1, sentiment = ?, sentiment_score = ?, emotion = ?, sarcasm = ?, stance = ?, topic_id = ?
-            WHERE id = ?`,
-          pick(SENTIMENTS, sentiment, "neutral"), score, pick(EMOTIONS, emotion, "neutral"),
-          sarcasm === true || Number(sarcasm) === 1 ? 1 : 0, pick(STANCES, stance, "neutral"),
-          topicIds.has(Number(topic)) ? Number(topic) : null, m.id,
-        );
-      });
+  const out = new Map<number, Label>();
+  for (const r of (Array.isArray(res.r) ? res.r : []).filter(Array.isArray)) {
+    const [i, sentiment, rawScore, emotion, sarcasm, stance, topic] = r;
+    out.set(Number(i), {
+      sentiment: pick(SENTIMENTS, sentiment, "neutral"),
+      score: Math.max(-1, Math.min(1, Number(rawScore) || 0)),
+      emotion: pick(EMOTIONS, emotion, "neutral"),
+      sarcasm: sarcasm === true || Number(sarcasm) === 1 ? 1 : 0,
+      stance: pick(STANCES, stance, "neutral"),
+      topic: Number(topic) || 0,
     });
-  };
-
-  let done = 0;
-  for (let start = 0; start < pending.length; start += BATCH) {
-    const batch = pending.slice(start, start + BATCH);
-    await label(batch);
-    done += batch.length;
-    onProgress?.(done, pending.length);
   }
-  return done;
+  return out;
 }

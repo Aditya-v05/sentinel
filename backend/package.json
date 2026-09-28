@@ -7,16 +7,20 @@
     "start": "tsx src/server.ts",
     "telegram:login": "tsx src/telegram/login.ts",
     "db:snapshot": "tsx src/snapshot.ts",
+    "eval:fetch": "tsx src/eval/fetch.ts",
+    "eval": "tsx src/eval/run.ts",
     "typecheck": "tsc --noEmit"
   },
   "type": "module",
   "dependencies": {
+    "@types/sentiment": "^5.0.4",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "graphology": "^0.26.0",
     "graphology-communities-louvain": "^2.0.2",
     "graphology-metrics": "^2.4.2",
     "groq-sdk": "^1.6.0",
+    "sentiment": "^5.0.2",
     "telegram": "^2.26.22"
   },
   "devDependencies": {

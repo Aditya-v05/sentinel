@@ -1,0 +1,119 @@
+{
+  "at": "2026-09-28T07:45:58.341Z",
+  "model": "mock",
+  "tasks": {
+    "sentiment": {
+      "n": 40,
+      "accuracy": 0.275,
+      "macroF1": 0.2168,
+      "confusion": {
+        "neutral": {
+          "negative": 9,
+          "positive": 6,
+          "neutral": 8
+        },
+        "negative": {
+          "neutral": 4,
+          "negative": 3,
+          "positive": 3
+        },
+        "positive": {
+          "negative": 3,
+          "neutral": 4
+        }
+      },
+      "skipped": 0,
+      "baselines": {
+        "majority": {
+          "accuracy": 0.575,
+          "macroF1": 0.2434
+        },
+        "afinnLexicon": {
+          "accuracy": 0.45,
+          "macroF1": 0.3724
+        }
+      }
+    },
+    "emotion": {
+      "n": 40,
+      "accuracy": 0.2,
+      "macroF1": 0.1758,
+      "confusion": {
+        "joy": {
+          "other": 2,
+          "anger": 5,
+          "joy": 4,
+          "sadness": 3
+        },
+        "anger": {
+          "sadness": 6,
+          "other": 3,
+          "anger": 2,
+          "joy": 3
+        },
+        "sadness": {
+          "other": 2,
+          "anger": 6,
+          "sadness": 2
+        },
+        "optimism": {
+          "sadness": 2
+        }
+      },
+      "skipped": 0,
+      "baselines": {
+        "majority": {
+          "accuracy": 0.35,
+          "macroF1": 0.1296
+        }
+      }
+    },
+    "irony": {
+      "n": 40,
+      "accuracy": 0.45,
+      "macroF1": 0.3103,
+      "confusion": {
+        "non_irony": {
+          "non_irony": 18,
+          "irony": 1
+        },
+        "irony": {
+          "non_irony": 21
+        }
+      },
+      "skipped": 0,
+      "baselines": {
+        "majority": {
+          "accuracy": 0.525,
+          "macroF1": 0.3443
+        }
+      }
+    },
+    "stance": {
+      "n": 40,
+      "accuracy": 0.3,
+      "macroF1": 0.2116,
+      "confusion": {
+        "favor": {
+          "against": 9,
+          "none": 14,
+          "favor": 10
+        },
+        "none": {
+          "against": 3,
+          "none": 2
+        },
+        "against": {
+          "favor": 2
+        }
+      },
+      "skipped": 0,
+      "baselines": {
+        "majority": {
+          "accuracy": 0.825,
+          "macroF1": 0.3014
+        }
+      }
+    }
+  }
+}

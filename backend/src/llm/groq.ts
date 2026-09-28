@@ -28,10 +28,17 @@ async function throttle(estimate: number) {
 }
 
 const azure = () => config.llm.provider === "azure";
+const ollama = () => config.llm.provider === "ollama";
+const mock = () => config.llm.provider === "mock";
 export const llmConfigured = () =>
-  azure() ? Boolean(config.azure.apiKey && config.azure.endpoint && config.azure.deployment) : Boolean(config.groq.apiKey);
+  azure() ? Boolean(config.azure.apiKey && config.azure.endpoint && config.azure.deployment)
+  : ollama() || mock() ? true
+  : Boolean(config.groq.apiKey);
 /** What the dashboard shows as the model. */
-export const llmModelName = () => (azure() ? `azure/${config.azure.deployment}` : config.groq.model);
+export const llmModelName = () =>
+  azure() ? `azure/${config.azure.deployment}` : ollama() ? `ollama/${config.ollama.model}` : mock() ? "mock" : config.groq.model;
+/** True when no message text leaves this machine to be labelled. */
+export const llmIsLocal = () => ollama() || mock();
 export const llmAvailable = () => llmConfigured() && Date.now() >= llmState.pausedUntil;
 
 export class LlmPausedError extends Error {}
@@ -49,8 +56,10 @@ export async function chatJSON<T>(system: string, user: string, opts: { model?: 
   const maxTokens = opts.maxTokens ?? 2000;
   // ~3.5 chars per token for input; assume the reply uses about half its cap
   const estimate = Math.ceil((system.length + user.length) / 3.5) + Math.ceil(maxTokens / 2);
+  if (mock()) return mockJSON<T>(user);
   await throttle(estimate);
   if (azure()) return azureJSON<T>(system, user, maxTokens, estimate);
+  if (ollama()) return ollamaJSON<T>(system, user, maxTokens, estimate);
 
   client ??= new Groq({ apiKey: config.groq.apiKey, maxRetries: 3, timeout: 60_000 });
   const model = opts.model ?? config.groq.model;
@@ -130,6 +139,59 @@ async function azureJSON<T>(system: string, user: string, maxTokens: number, est
     llmState.lastError = ((e as Error).message ?? String(e)).slice(0, 160);
     throw new Error(llmState.lastError);
   }
+}
+
+/**
+ * Ollama's OpenAI-compatible endpoint on this machine. The on-premise path: the same prompts,
+ * no network egress. Slower than a hosted model; correctness is what the eval harness measures.
+ */
+async function ollamaJSON<T>(system: string, user: string, maxTokens: number, estimate: number): Promise<T> {
+  try {
+    const res = await fetch(`${config.ollama.url}/v1/chat/completions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model: config.ollama.model,
+        temperature: 0,
+        max_tokens: maxTokens,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      }),
+      signal: AbortSignal.timeout(300_000),
+    });
+    const data = (await res.json()) as { error?: { message?: string } | string; usage?: { total_tokens?: number }; choices?: { message?: { content?: string } }[] };
+    if (!res.ok) throw new Error(`Ollama ${res.status}: ${typeof data.error === "string" ? data.error : data.error?.message ?? ""}`.slice(0, 160));
+    usage.push({ at: Date.now(), tokens: data.usage?.total_tokens ?? estimate });
+    llmState.lastError = "";
+    return JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as T;
+  } catch (e) {
+    usage.push({ at: Date.now(), tokens: estimate });
+    llmState.lastError = ((e as Error).message ?? String(e)).slice(0, 160);
+    throw new Error(llmState.lastError);
+  }
+}
+
+/**
+ * Deterministic stand-in for tests and dry runs: answers every prompt shape the pipeline
+ * sends with plausible, fixed-vocabulary values derived from the input text. Never used
+ * for real analysis; it exists so the pipeline and the harness can be exercised offline.
+ */
+function mockJSON<T>(user: string): T {
+  const hash = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+  if (user.includes('"r":[[')) {
+    const items = JSON.parse(user.slice(user.indexOf("Messages (JSON):") + 16, user.indexOf("Return one compact row")).trim()) as { i: number; text: string }[];
+    const sent = ["positive", "neutral", "negative"], emo = ["joy", "neutral", "anger", "sadness"], st = ["supportive", "neutral", "against"];
+    return { r: items.map((it) => { const h = hash(it.text); return [it.i, sent[h % 3], ((h % 3) - 1) * 0.6, emo[h % 4], h % 7 === 0 ? 1 : 0, st[h % 3], 0]; }) } as T;
+  }
+  if (user.includes('"results":[{"i":0,"language"')) {
+    const items = JSON.parse(user.slice(user.indexOf("Users (JSON):") + 13, user.indexOf("Return:")).trim()) as { i: number }[];
+    return { results: items.map((it) => ({ i: it.i, language: "English", region: "India", age_bracket: "25-34", interests: ["technology"], profession: "student" })) } as T;
+  }
+  if (user.includes('"topics":[{"label"')) return { topics: [{ label: "General discussion", keywords: ["talk"], description: "Mock topic." }] } as T;
+  return { headline: "Mock briefing", bullets: ["No model configured; this is placeholder text."] } as T;
 }
 
 /**

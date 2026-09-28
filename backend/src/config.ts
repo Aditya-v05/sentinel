@@ -26,8 +26,13 @@ export const config = {
   // Which model labels messages. Azure OpenAI when its key is set (the deployment used across
   // our SIH work), otherwise Groq's free tier. Both go through llm/groq.ts chatJSON().
   llm: {
-    provider: (process.env.LLM_PROVIDER || (process.env.AZURE_OPENAI_API_KEY ? "azure" : "groq")) as "azure" | "groq",
+    // azure | groq | ollama (local, nothing leaves the machine) | mock (tests only)
+    provider: (process.env.LLM_PROVIDER || (process.env.AZURE_OPENAI_API_KEY ? "azure" : "groq")) as "azure" | "groq" | "ollama" | "mock",
     tpm: num(process.env.LLM_TPM, process.env.AZURE_OPENAI_API_KEY ? 60000 : 8000),
+  },
+  ollama: {
+    url: (process.env.OLLAMA_URL || "http://localhost:11434").replace(/\/+$/, ""),
+    model: process.env.OLLAMA_MODEL || "qwen2.5:7b",
   },
   azure: {
     endpoint: (process.env.AZURE_OPENAI_ENDPOINT ?? "").replace(/\/+$/, ""),

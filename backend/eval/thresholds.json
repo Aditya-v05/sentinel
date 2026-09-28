@@ -1,0 +1,7 @@
+{
+  "_note": "Floors a build must hold on the fixed TweetEval samples (npm run eval -- --check). Set from the first real run; raise them when the labeller improves, never lower them to pass.",
+  "sentiment": { "accuracy": 0.0, "macroF1": 0.0 },
+  "emotion": { "accuracy": 0.0, "macroF1": 0.0 },
+  "irony": { "accuracy": 0.0, "macroF1": 0.0 },
+  "stance": { "accuracy": 0.0, "macroF1": 0.0 }
+}
