@@ -1,7 +1,7 @@
 {
-  "_note": "Floors a build must hold on the fixed TweetEval samples (npm run eval -- --check). Set from the first real run; raise them when the labeller improves, never lower them to pass.",
-  "sentiment": { "accuracy": 0.0, "macroF1": 0.0 },
-  "emotion": { "accuracy": 0.0, "macroF1": 0.0 },
-  "irony": { "accuracy": 0.0, "macroF1": 0.0 },
-  "stance": { "accuracy": 0.0, "macroF1": 0.0 }
+  "_note": "Floors a build must hold on the fixed TweetEval samples (npm run eval -- --check). Set a little under the first real run (azure/gpt-5.6-terra, reasoning low, 28 Sep 2026: sentiment 0.60/0.59, emotion 0.72/0.72, irony 0.945/0.944, stance 0.76/0.66). Raise them when the labeller improves; never lower them to pass.",
+  "sentiment": { "accuracy": 0.55, "macroF1": 0.53 },
+  "emotion": { "accuracy": 0.65, "macroF1": 0.65 },
+  "irony": { "accuracy": 0.88, "macroF1": 0.88 },
+  "stance": { "accuracy": 0.70, "macroF1": 0.60 }
 }

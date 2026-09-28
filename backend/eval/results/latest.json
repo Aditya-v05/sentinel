@@ -1,117 +1,125 @@
 {
-  "at": "2026-09-28T07:45:58.341Z",
-  "model": "mock",
+  "at": "2026-09-28T08:23:39.404Z",
+  "model": "azure/gpt-5.6-terra",
   "tasks": {
     "sentiment": {
-      "n": 40,
-      "accuracy": 0.275,
-      "macroF1": 0.2168,
+      "n": 200,
+      "accuracy": 0.6,
+      "macroF1": 0.5876,
       "confusion": {
         "neutral": {
-          "negative": 9,
-          "positive": 6,
-          "neutral": 8
+          "negative": 32,
+          "neutral": 41,
+          "positive": 20
         },
         "negative": {
-          "neutral": 4,
-          "negative": 3,
-          "positive": 3
+          "positive": 4,
+          "negative": 57,
+          "neutral": 10
         },
         "positive": {
-          "negative": 3,
-          "neutral": 4
+          "positive": 22,
+          "neutral": 8,
+          "negative": 6
         }
       },
       "skipped": 0,
       "baselines": {
         "majority": {
-          "accuracy": 0.575,
-          "macroF1": 0.2434
+          "accuracy": 0.465,
+          "macroF1": 0.2116
         },
         "afinnLexicon": {
-          "accuracy": 0.45,
-          "macroF1": 0.3724
+          "accuracy": 0.545,
+          "macroF1": 0.5235
         }
       }
     },
     "emotion": {
-      "n": 40,
-      "accuracy": 0.2,
-      "macroF1": 0.1758,
+      "n": 200,
+      "accuracy": 0.72,
+      "macroF1": 0.7207,
       "confusion": {
         "joy": {
-          "other": 2,
-          "anger": 5,
-          "joy": 4,
-          "sadness": 3
+          "joy": 42,
+          "other": 11,
+          "sadness": 3,
+          "anger": 3
         },
         "anger": {
-          "sadness": 6,
-          "other": 3,
-          "anger": 2,
+          "sadness": 7,
+          "anger": 52,
+          "other": 5,
           "joy": 3
         },
         "sadness": {
-          "other": 2,
-          "anger": 6,
-          "sadness": 2
+          "sadness": 44,
+          "other": 5,
+          "anger": 5,
+          "joy": 2
         },
         "optimism": {
-          "sadness": 2
+          "other": 8,
+          "optimism": 6,
+          "sadness": 3,
+          "joy": 1
         }
       },
       "skipped": 0,
       "baselines": {
         "majority": {
-          "accuracy": 0.35,
-          "macroF1": 0.1296
+          "accuracy": 0.335,
+          "macroF1": 0.1255
         }
       }
     },
     "irony": {
-      "n": 40,
-      "accuracy": 0.45,
-      "macroF1": 0.3103,
+      "n": 200,
+      "accuracy": 0.945,
+      "macroF1": 0.9443,
       "confusion": {
         "non_irony": {
-          "non_irony": 18,
-          "irony": 1
+          "non_irony": 106,
+          "irony": 8
         },
         "irony": {
-          "non_irony": 21
+          "irony": 83,
+          "non_irony": 3
         }
       },
       "skipped": 0,
       "baselines": {
         "majority": {
-          "accuracy": 0.525,
-          "macroF1": 0.3443
+          "accuracy": 0.57,
+          "macroF1": 0.3631
         }
       }
     },
     "stance": {
-      "n": 40,
-      "accuracy": 0.3,
-      "macroF1": 0.2116,
+      "n": 169,
+      "accuracy": 0.7574,
+      "macroF1": 0.657,
       "confusion": {
         "favor": {
-          "against": 9,
-          "none": 14,
-          "favor": 10
+          "favor": 101,
+          "none": 15,
+          "against": 7
         },
         "none": {
-          "against": 3,
-          "none": 2
+          "none": 18,
+          "favor": 14,
+          "against": 3
         },
         "against": {
+          "against": 9,
           "favor": 2
         }
       },
       "skipped": 0,
       "baselines": {
         "majority": {
-          "accuracy": 0.825,
-          "macroF1": 0.3014
+          "accuracy": 0.7278,
+          "macroF1": 0.2808
         }
       }
     }
