@@ -315,6 +315,7 @@ Base: `http://localhost:4000/api`. All dashboard endpoints accept `?days=1|7|30|
 | `GET /integrity/verify` | collection-log status (public) |
 | `POST /auth/login` `{"password"}` | session token when `APP_PASSWORD` is set |
 | `GET /health` | liveness (public) |
+| `GET /export?dataset=…&format=csv\|json` | `messages`, `sentiment`, `keywords`, `topics`, `nodes`, `edges`, `segments` (CSV or JSON); `audience`, `coordination`, `report` (JSON). Same `?source=&days=` filters. The Export menu beside the filters calls this. |
 
 Every time-series response carries `buckets` (unix start of each bucket) and `bucketSec`.
 

@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { authEnabled, login } from "./auth.js";
+import { DATASETS, dataset, toCSV, type Dataset } from "./export.js";
 import { verify as verifyChain } from "./chain.js";
 import { config } from "./config.js";
 import { all, get, run } from "./db.js";
@@ -83,6 +84,28 @@ api.get(
       pipeline,
       counts,
     };
+  }),
+);
+
+api.get(
+  "/export",
+  handle((req, res) => {
+    const name = String(req.query.dataset ?? "report") as Dataset;
+    if (!DATASETS.includes(name)) throw new Error(`dataset must be one of ${DATASETS.join(", ")}`);
+    const format = String(req.query.format ?? (name === "audience" || name === "coordination" || name === "report" ? "json" : "csv"));
+    const r = resolveRange(req.query);
+    const out = dataset(name, r);
+    const stamp = new Date(r.to * 1000).toISOString().slice(0, 10);
+    const file = `sentinel-${name}-${r.source ? `source${r.source}-` : ""}${stamp}`;
+    if (format === "csv") {
+      if (!("rows" in out)) throw new Error(`${name} is only available as JSON`);
+      res.setHeader("content-type", "text/csv; charset=utf-8");
+      res.setHeader("content-disposition", `attachment; filename="${file}.csv"`);
+      res.send(toCSV(out.rows));
+      return;
+    }
+    res.setHeader("content-disposition", `attachment; filename="${file}.json"`);
+    res.json("rows" in out ? out.rows : out.json);
   }),
 );
 
