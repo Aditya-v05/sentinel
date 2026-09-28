@@ -149,6 +149,11 @@ function compute(r: Range) {
   return { nodes: allNodes, edges: [...edges.values()], stats: nodes, communityOf };
 }
 
+/** The segment (Louvain community) each author belongs to in this window; -1 = unclustered. */
+export function communityOfFn(r: Range) {
+  return buildNetwork(r).communityOf;
+}
+
 export function network(r: Range) {
   const { nodes, edges, stats } = buildNetwork(r);
   const shown = new Set(nodes.slice(0, MAX_RENDER_NODES).map((n) => n.id));

@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { config } from "./config.js";
 import { all, get, run } from "./db.js";
+import { coordination, origin } from "./analysis/coordination.js";
 import { demographics } from "./analysis/demographics.js";
 import { insights } from "./analysis/insights.js";
 import { network, spread } from "./analysis/network.js";
@@ -57,6 +58,17 @@ api.get(
       pipeline,
       counts,
     };
+  }),
+);
+
+api.get("/coordination", handle((req) => coordination(resolveRange(req.query))));
+api.get(
+  "/origin",
+  handle((req) => {
+    const topic = Number(req.query.topic) || undefined;
+    const term = String(req.query.term ?? "").trim() || undefined;
+    if (!topic && !term) throw new Error("pass ?topic=<id> or ?term=<text>");
+    return origin(resolveRange(req.query), { topic, term });
   }),
 );
 

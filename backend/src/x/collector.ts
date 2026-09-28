@@ -63,13 +63,15 @@ function upsertAuthor(a: Author | undefined, ts: number): string | null {
   if (!a?.id) return null;
   const key = userKey(a.id);
   run(
-    `INSERT INTO users (key, platform, username, display_name, bio, location, followers, kind, is_bot, bio_fetched, first_seen)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'user', 0, 1, ?)
+    `INSERT INTO users (key, platform, username, display_name, bio, location, followers, account_created, kind, is_bot, bio_fetched, first_seen)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'user', 0, 1, ?)
      ON CONFLICT(key) DO UPDATE SET username = excluded.username, display_name = excluded.display_name,
        bio = COALESCE(NULLIF(excluded.bio, ''), users.bio), location = COALESCE(NULLIF(excluded.location, ''), users.location),
-       followers = COALESCE(excluded.followers, users.followers), bio_fetched = 1`,
+       followers = COALESCE(excluded.followers, users.followers),
+       account_created = COALESCE(excluded.account_created, users.account_created),
+       first_seen = MIN(users.first_seen, excluded.first_seen), bio_fetched = 1`,
     key, PLATFORM, a.userName ?? null, a.name ?? a.userName ?? null, a.description ?? "", a.location ?? "",
-    a.followers ?? null, ts,
+    a.followers ?? null, a.createdAt ? Math.floor(Date.parse(a.createdAt) / 1000) || null : null, ts,
   );
   return key;
 }

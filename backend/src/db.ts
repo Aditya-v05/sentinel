@@ -108,7 +108,11 @@ CREATE TABLE IF NOT EXISTS x_threads (
 
 // Columns added after iteration 1. ALTER is the one non-additive change SQLite allows cheaply,
 // so an existing analytics.db keeps working without being deleted.
-for (const ddl of ["ALTER TABLE users ADD COLUMN location TEXT", "ALTER TABLE users ADD COLUMN followers INTEGER"]) {
+for (const ddl of [
+  "ALTER TABLE users ADD COLUMN location TEXT",
+  "ALTER TABLE users ADD COLUMN followers INTEGER",
+  "ALTER TABLE users ADD COLUMN account_created INTEGER",   // unix s; X profiles carry it, Telegram does not
+]) {
   try {
     db.exec(ddl);
   } catch {
