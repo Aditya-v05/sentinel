@@ -5,7 +5,7 @@ import {
 import { axisProps, Card, ChartTip, Empty, ErrorBox, Legend, Page, Spark, Stat } from "../components/ui";
 import { useApi, type Series } from "../lib/api";
 import { useFilters } from "../lib/filters";
-import { capitalize, fmtBucket, fmtDate, fmtScore, toneClass } from "../lib/format";
+import { capitalize, EMOTION_HUE, fmtBucket, fmtDate, fmtScore, toneClass } from "../lib/format";
 
 interface ThreadRow { id: number; text: string; author: string; source: string; platform: string; ts: number; replies: number; labelled: number; scores: number[]; avg: number | null; start: number | null; end: number | null; drift: number | null }
 interface ThreadDetail {
@@ -143,7 +143,7 @@ export default function Sentiment() {
 
           <div className="section-label">Over time</div>
           <div className="grid g2">
-            <Card title="Positive vs negative messages" note={<Legend items={[{ label: "Positive (up)", fill: "var(--g1)" }, { label: "Negative (down)", fill: "var(--g3)" }]} />}>
+            <Card title="Positive vs negative messages" note={<Legend items={[{ label: "Positive (up)", fill: "var(--pos)" }, { label: "Negative (down)", fill: "var(--neg)" }]} />}>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={polarity} stackOffset="sign" margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                   <CartesianGrid stroke="var(--line)" vertical={false} />
@@ -151,8 +151,8 @@ export default function Sentiment() {
                   <YAxis tickFormatter={(v) => String(Math.abs(v))} allowDecimals={false} {...axisProps} />
                   <ReferenceLine y={0} stroke="var(--ink-3)" />
                   <Tooltip content={<ChartTip fmtLabel={fmt} />} cursor={{ fill: "var(--hover)" }} />
-                  <Bar isAnimationActive={false} dataKey="positive" name="Positive" stackId="s" fill="var(--g1)" radius={[3, 3, 0, 0]} maxBarSize={18} />
-                  <Bar isAnimationActive={false} dataKey="negative" name="Negative" stackId="s" fill="var(--g3)" radius={[3, 3, 0, 0]} maxBarSize={18} />
+                  <Bar isAnimationActive={false} dataKey="positive" name="Positive" stackId="s" fill="var(--pos)" radius={[3, 3, 0, 0]} maxBarSize={18} />
+                  <Bar isAnimationActive={false} dataKey="negative" name="Negative" stackId="s" fill="var(--neg)" radius={[3, 3, 0, 0]} maxBarSize={18} />
                   <Bar isAnimationActive={false} dataKey="neutral" name="Neutral" hide />
                 </BarChart>
               </ResponsiveContainer>
@@ -166,7 +166,7 @@ export default function Sentiment() {
                   <YAxis domain={[-1, 1]} ticks={[-1, -0.5, 0, 0.5, 1]} {...axisProps} />
                   <ReferenceLine y={0} stroke="var(--ink-3)" strokeDasharray="3 3" />
                   <Tooltip content={<ChartTip fmtLabel={fmt} />} cursor={{ stroke: "var(--ink-3)" }} />
-                  <Line isAnimationActive={false} dataKey="score" name="Avg score" stroke="var(--g1)" strokeWidth={2} dot={false} connectNulls />
+                  <Line isAnimationActive={false} dataKey="score" name="Avg score" stroke="var(--accent)" strokeWidth={2} dot={false} connectNulls />
                 </LineChart>
               </ResponsiveContainer>
             </Card>
@@ -178,14 +178,14 @@ export default function Sentiment() {
               <button
                 key={name}
                 className="card"
-                style={{ textAlign: "left", cursor: "pointer", outline: emotion === name ? "1.5px solid var(--ink)" : undefined }}
+                style={{ textAlign: "left", cursor: "pointer", outline: emotion === name ? `1.5px solid ${EMOTION_HUE[name] ?? "var(--ink)"}` : undefined }}
                 onClick={() => setEmotion(name)}
               >
                 <div className="card-h" style={{ marginBottom: 8 }}>
-                  <h3>{capitalize(name)}</h3>
+                  <h3><i className="swatch" style={{ ["--hue" as string]: EMOTION_HUE[name] ?? "var(--g4)" }} />{capitalize(name)}</h3>
                   <span className="mono">{pct(total, T.analyzed)}%</span>
                 </div>
-                <Spark values={data.emotion[name]} width={220} height={36} />
+                <Spark values={data.emotion[name]} width={220} height={36} color={EMOTION_HUE[name] ?? "var(--accent)"} />
               </button>
             ))}
           </div>
@@ -210,9 +210,9 @@ export default function Sentiment() {
             <div className="stack">
               <Card title="Stance" note="toward the subject under discussion">
                 <div style={{ display: "flex", height: 10, borderRadius: 5, overflow: "hidden", gap: 2 }}>
-                  <div style={{ flex: T.stance.supportive, background: "var(--g1)" }} />
+                  <div style={{ flex: T.stance.supportive, background: "var(--pos)" }} />
                   <div style={{ flex: T.stance.neutral, background: "var(--g5)" }} />
-                  <div style={{ flex: T.stance.against, background: "var(--g3)" }} />
+                  <div style={{ flex: T.stance.against, background: "var(--neg)" }} />
                 </div>
                 <div className="legend" style={{ marginTop: 10 }}>
                   <span className="pos">Supportive {pct(T.stance.supportive, stanceTotal)}%</span>
@@ -226,7 +226,7 @@ export default function Sentiment() {
                     <XAxis dataKey="b" tickFormatter={fmt} minTickGap={50} {...axisProps} />
                     <YAxis allowDecimals={false} {...axisProps} />
                     <Tooltip content={<ChartTip fmtLabel={fmt} />} cursor={{ stroke: "var(--ink-3)" }} />
-                    <Line isAnimationActive={false} dataKey="sarcasm" name="Sarcasm %" stroke="var(--g1)" strokeWidth={2} dot={false} connectNulls />
+                    <Line isAnimationActive={false} dataKey="sarcasm" name="Sarcasm %" stroke="var(--c4)" strokeWidth={2} dot={false} connectNulls />
                   </LineChart>
                 </ResponsiveContainer>
                 {data.sarcasticSamples[0] && (

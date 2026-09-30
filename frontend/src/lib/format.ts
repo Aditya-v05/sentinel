@@ -34,3 +34,16 @@ export function toneClass(v: number | string | null | undefined) {
   if (v === "negative" || v === "against" || v === "falling") return "neg";
   return "";
 }
+
+/** Fixed categorical slot for a segment id; -1 (unclustered) gets the neutral grey. */
+export const segmentHue = (id: number) => (id < 0 ? "var(--g4)" : `var(--c${id % 7})`);
+
+export const PLATFORM_HUE: Record<string, string> = {
+  x: "var(--ink)", telegram: "#2aabee", reddit: "#ff4500", youtube: "#e62117", instagram: "#e1306c", facebook: "#1877f2",
+};
+export const platformName = (p: string) => ({ x: "X", telegram: "Telegram", reddit: "Reddit", youtube: "YouTube", instagram: "Instagram", facebook: "Facebook" }[p] ?? p);
+
+/** Warm for arousal, cool for calm: the same hue wherever an emotion is drawn. */
+export const EMOTION_HUE: Record<string, string> = {
+  excitement: "var(--c1)", joy: "var(--c3)", hope: "var(--c2)", surprise: "var(--c6)", anxiety: "var(--c4)", anger: "var(--c5)", sadness: "var(--c0)", neutral: "var(--g4)",
+};

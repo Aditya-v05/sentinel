@@ -170,12 +170,12 @@ function TopicChart({ topic, data, fmt }: { topic: Topic; data: TrendsData; fmt:
           <YAxis allowDecimals={false} {...axisProps} />
           <ReferenceLine x={data.buckets[last]} stroke="var(--line-strong)" />
           <Tooltip content={<ChartTip fmtLabel={fmt} />} cursor={{ stroke: "var(--ink-3)" }} />
-          <Line isAnimationActive={false} dataKey="actual" name="Messages" stroke="var(--g1)" strokeWidth={2} dot={false} connectNulls={false} />
-          <Line isAnimationActive={false} dataKey="forecast" name="Forecast" stroke="var(--g3)" strokeWidth={2} strokeDasharray="4 4" dot={false} connectNulls />
+          <Line isAnimationActive={false} dataKey="actual" name="Messages" stroke="var(--accent)" strokeWidth={2} dot={false} connectNulls={false} />
+          <Line isAnimationActive={false} dataKey="forecast" name="Forecast" stroke="var(--accent)" strokeOpacity={0.55} strokeWidth={2} strokeDasharray="4 4" dot={false} connectNulls />
         </LineChart>
       </ResponsiveContainer>
       <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-        <Legend items={[{ label: "Observed", fill: "var(--g1)" }, { label: "Forecast (Holt smoothing)", fill: "var(--g3)", dashed: true }]} />
+        <Legend items={[{ label: "Observed", fill: "var(--accent)" }, { label: "Forecast (Holt smoothing)", fill: "var(--accent)", dashed: true }]} />
         <span className="mono faint">{topic.keywords.join(" · ")}</span>
       </div>
     </Card>

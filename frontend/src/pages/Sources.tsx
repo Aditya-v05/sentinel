@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Card, Empty, ErrorBox, Page } from "../components/ui";
 import { api, useApi, type Source, type Status } from "../lib/api";
-import { fmtAgo, fmtDate, fmtNum } from "../lib/format";
+import { fmtAgo, fmtDate, fmtNum, PLATFORM_HUE, platformName } from "../lib/format";
 
 export default function Sources({ status }: { status: Status | null }) {
   const { data: sources, reload } = useApi<Source[]>("/sources", 5000);
@@ -119,7 +119,7 @@ export default function Sources({ status }: { status: Status | null }) {
                       </div>
                     </td>
                     <td>
-                      <span className="tag">{s.platform === "telegram" ? s.kind : `${s.platform === "x" ? "X" : s.platform} · ${s.kind}`}</span>
+                      <span className="tag hue" style={{ ["--hue" as string]: PLATFORM_HUE[s.platform] ?? "var(--ink-2)" }}>{platformName(s.platform)} · {s.kind}</span>
                     </td>
                     <td className="num">{fmtNum(s.messages)}</td>
                     <td className="muted">{fmtDate(s.first_ts)}</td>

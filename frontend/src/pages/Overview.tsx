@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { axisProps, Card, ChartTip, Empty, ErrorBox, Page, Stat } from "../components/ui";
-import { api, useApi, type Series } from "../lib/api";
+import { api, useApi, type Series, type Source } from "../lib/api";
 import { useFilters } from "../lib/filters";
-import { fmtBucket, fmtNum, fmtScore, toneClass } from "../lib/format";
+import { fmtBucket, fmtNum, fmtScore, PLATFORM_HUE, platformName, toneClass } from "../lib/format";
 
 interface OverviewData extends Series {
   volume: number[];
@@ -15,6 +15,10 @@ export default function Overview() {
   const { data, error } = useApi<OverviewData>(`/overview${qs}`, 30000);
   const t = data?.totals;
   const rows = data?.buckets.map((b, i) => ({ b, volume: data.volume[i] })) ?? [];
+  const { data: sources } = useApi<Source[]>("/sources", 60000);
+  const platforms = Object.entries(
+    (sources ?? []).reduce<Record<string, number>>((acc, s) => ((acc[s.platform] = (acc[s.platform] ?? 0) + s.messages), acc), {}),
+  ).sort((a, b) => b[1] - a[1]);
 
   return (
     <Page title="Overview" sub="Conversation volume and the headline read on your audience.">
@@ -25,6 +29,16 @@ export default function Overview() {
         <Stat value={t?.messages ? `${Math.round(((t.analyzed ?? 0) / t.messages) * 100)}%` : "—"} label="Analysed by AI" />
         <Stat value={fmtScore(t?.avgSentiment)} label="Average sentiment (−1 to +1)" className={toneClass(t?.avgSentiment ?? 0)} />
       </div>
+      {platforms.length > 0 && (
+        <div className="platforms">
+          {platforms.map(([p, n]) => (
+            <span key={p} className="pill">
+              <i className="swatch" style={{ ["--hue" as string]: PLATFORM_HUE[p] ?? "var(--g3)", marginRight: 0 }} />
+              {platformName(p)} <b>{fmtNum(n)}</b>
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="section-label">Timeline</div>
       <Card title="Message volume" note={data ? `per ${data.bucketSec >= 86400 ? "day" : data.bucketSec >= 21600 ? "6 hours" : "hour"}` : ""}>
@@ -33,11 +47,17 @@ export default function Overview() {
         ) : (
           <ResponsiveContainer width="100%" height={260}>
             <AreaChart data={rows} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+              <defs>
+                <linearGradient id="vol" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
               <CartesianGrid stroke="var(--line)" vertical={false} />
               <XAxis dataKey="b" tickFormatter={(v) => fmtBucket(v, data!.bucketSec)} minTickGap={40} {...axisProps} />
               <YAxis allowDecimals={false} {...axisProps} />
               <Tooltip content={<ChartTip fmtLabel={(v: number) => fmtBucket(v, data!.bucketSec)} />} cursor={{ stroke: "var(--ink-3)" }} />
-              <Area isAnimationActive={false} type="monotone" dataKey="volume" name="Messages" stroke="var(--g1)" strokeWidth={2} fill="var(--g5)" />
+              <Area isAnimationActive={false} type="monotone" dataKey="volume" name="Messages" stroke="var(--accent)" strokeWidth={2} fill="url(#vol)" />
             </AreaChart>
           </ResponsiveContainer>
         )}

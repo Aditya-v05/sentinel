@@ -3,7 +3,7 @@ import ForceGraph2D from "react-force-graph-2d";
 import { Card, Empty, ErrorBox, Page, Spark } from "../components/ui";
 import { useApi, type Community, type GraphEdge, type GraphNode, type Series } from "../lib/api";
 import { useFilters } from "../lib/filters";
-import { fmtDate, fmtNum, fmtScore, toneClass } from "../lib/format";
+import { fmtDate, fmtNum, fmtScore, segmentHue, toneClass } from "../lib/format";
 
 interface NetworkData {
   totals: { nodes: number; edges: number; shown: number };
@@ -23,7 +23,10 @@ function useTokens() {
   const read = () => {
     const s = getComputedStyle(document.documentElement);
     const v = (k: string) => s.getPropertyValue(k).trim();
-    return { ink: v("--ink"), g2: v("--g2"), g3: v("--g3"), g4: v("--g4"), g5: v("--g5"), bg: v("--bg"), pos: v("--pos"), neg: v("--neg"), font: v("--font") };
+    return {
+      ink: v("--ink"), g2: v("--g2"), g3: v("--g3"), g4: v("--g4"), g5: v("--g5"), bg: v("--bg"), pos: v("--pos"), neg: v("--neg"), font: v("--font"),
+      c: [0, 1, 2, 3, 4, 5, 6].map((i) => v(`--c${i}`)),
+    };
   };
   const [tokens, setTokens] = useState(read);
   useEffect(() => {
@@ -90,7 +93,7 @@ export default function Network() {
                       <td className="num">{n.messages}</td>
                       <td className="num mono">{(n.pagerank * 100).toFixed(2)}</td>
                       <td className="num mono">{n.betweenness.toFixed(3)}</td>
-                      <td className="muted">{segmentName(n.community)}</td>
+                      <td><span className="tag hue" style={{ ["--hue" as string]: segmentHue(n.community) }}>{segmentName(n.community)}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -109,11 +112,11 @@ export default function Network() {
                 <button
                   key={c.id}
                   className="card"
-                  style={{ textAlign: "left", cursor: "pointer", outline: selected ? "1.5px solid var(--ink)" : undefined }}
+                  style={{ textAlign: "left", cursor: "pointer", outline: selected ? `1.5px solid ${segmentHue(c.id)}` : undefined, borderTop: `3px solid ${segmentHue(c.id)}` }}
                   onClick={() => setSegment(selected ? null : c.id)}
                 >
                   <div className="card-h">
-                    <h3>{segmentName(c.id)}</h3>
+                    <h3><i className="swatch" style={{ ["--hue" as string]: segmentHue(c.id) }} />{segmentName(c.id)}</h3>
                     <span>{c.size} people · {fmtNum(c.messages)} msgs</span>
                   </div>
                   <div className="legend" style={{ marginBottom: 8 }}>
@@ -199,7 +202,8 @@ function Graph({ data, segment }: { data: NetworkData; segment: number | null })
           nodeLabel={(n: any) => `${n.label} · ${n.messages} msgs · reach ${n.reach}`}
           linkColor={(l: any) => {
             const s = typeof l.source === "object" ? l.source.community : null;
-            return segment == null || s === segment ? t.g4 : t.g5;
+            if (segment != null && s !== segment) return t.g5;
+            return s != null && s >= 0 ? t.c[s % 7] + "66" : t.g4;
           }}
           linkWidth={(l: any) => Math.min(3, 0.4 + Math.log2(1 + l.weight) * 0.5)}
           linkDirectionalArrowLength={3}
@@ -214,11 +218,12 @@ function Graph({ data, segment }: { data: NetworkData; segment: number | null })
             const dim = segment != null && n.community !== segment;
             ctx.beginPath();
             ctx.arc(n.x, n.y, r, 0, 2 * Math.PI);
-            ctx.fillStyle = dim ? t.g5 : n.kind === "channel" ? t.bg : t.ink;
+            const hue = n.community >= 0 ? t.c[n.community % 7] : t.g4;
+            ctx.fillStyle = dim ? t.g5 : n.kind === "channel" ? t.bg : hue;
             ctx.fill();
             if (n.kind === "channel" && !dim) {
-              ctx.lineWidth = 1.5 / scale;
-              ctx.strokeStyle = t.ink;
+              ctx.lineWidth = 1.8 / scale;
+              ctx.strokeStyle = hue;
               ctx.stroke();
             }
             if (labelled.has(n.id) && !dim) {
@@ -244,7 +249,7 @@ function Graph({ data, segment }: { data: NetworkData; segment: number | null })
         <span className="mono muted" style={{ minWidth: 150, textAlign: "right" }}>{fmtDate(cut)} · {visibleCount}</span>
       </div>
       <p className="note">
-        Node size = influence. Filled = person, ring = channel. Arrows point to whoever received the reply, mention or forward. Labels are coloured by
+        Node size = influence, colour = audience segment. Filled = person, ring = channel. Arrows point to whoever received the reply, mention or forward. Labels are coloured by
         dominant sentiment (<span className="pos">positive</span> / <span className="neg">negative</span>). Drag the timeline to watch the network form.
       </p>
     </Card>

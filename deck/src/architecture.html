@@ -1,0 +1,72 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Sentinel — architecture</title>
+<style>
+  :root{--ink:#0b0b0b;--ink2:#52514e;--ink3:#8a8984;--rule:#e3e1db;--bg:#fff;
+        --blue:#3987e5;--blue-bg:#eef4fd;--blue-ink:#1d4e9a;--purple:#7c5cd6;--purple-bg:#f1edfc;--purple-ink:#3f2a8a;
+        --green:#24b985;--green-bg:#e9f8f1;--green-ink:#0f5a3a;--orange:#e8703c;--orange-bg:#fdf0ea;--orange-ink:#8a3a12;--red:#b3261e}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:Inter,"Helvetica Neue",Arial,sans-serif;color:var(--ink);width:2000px;height:780px;padding:40px 52px;position:relative}
+  .mono{font-family:"JetBrains Mono",Menlo,Consolas,monospace}
+  .band{border-radius:18px;padding:16px 20px 18px;position:relative}
+  .band .t{font-size:13px;letter-spacing:.18em;font-weight:700;margin-bottom:12px}
+  .b1{background:var(--blue-bg)}.b1 .t{color:var(--blue-ink)}
+  .b2{background:var(--purple-bg)}.b2 .t{color:var(--purple-ink)}
+  .b3{background:var(--green-bg)}.b3 .t{color:var(--green-ink)}
+  .row{display:grid;gap:12px}
+  .node{background:#fff;border:1.5px solid var(--rule);border-radius:12px;padding:12px 14px;min-height:74px}
+  .node b{display:block;font-size:19px;font-weight:700;letter-spacing:-.01em}
+  .node small{display:block;font-size:14px;color:var(--ink2);margin-top:2px;line-height:1.3}
+  .chips{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:3px 8px;border-radius:6px;background:#f2f1ee;color:var(--ink2);font-family:"JetBrains Mono",Menlo,monospace}
+  .chip img{width:13px;height:13px;opacity:.8}
+  .arrowrow{display:flex;justify-content:center;align-items:center;height:30px;position:relative}
+  .arrowrow span{font-size:13px;color:var(--ink3);letter-spacing:.14em;font-family:"JetBrains Mono",Menlo,monospace;background:#fff;padding:0 12px;position:relative;z-index:1}
+  .arrowrow::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--ink3)}
+  .seal{position:absolute;right:20px;top:14px;font-size:13px;color:var(--red);font-weight:700;letter-spacing:.08em;font-family:"JetBrains Mono",Menlo,monospace}
+  .foot{position:absolute;left:52px;right:52px;bottom:14px;font-size:14px;color:var(--ink3);display:flex;justify-content:space-between}
+  h1{margin:0 0 18px;font-size:34px;font-weight:700;letter-spacing:-.015em}
+</style>
+<h1>Sentinel — system architecture</h1>
+
+<div class="band b3"><div class="t">01 · CONSOLE</div>
+  <div class="row" style="grid-template-columns:repeat(7,1fr)">
+    <div class="node"><b>Overview</b><small>volume · briefing</small></div>
+    <div class="node"><b>Sentiment</b><small>polarity · emotion · stance · sarcasm · threads</small></div>
+    <div class="node"><b>Audience</b><small>aggregates only</small></div>
+    <div class="node"><b>Trends</b><small>topics · forecast · bursts</small></div>
+    <div class="node"><b>Network</b><small>graph · leaders · segments</small></div>
+    <div class="node"><b>Integrity</b><small>bursts · lockstep · origin · log</small></div>
+    <div class="node"><b>Sources · Export</b><small>six platforms · CSV / JSON</small></div>
+  </div>
+  <div class="chips" style="margin-top:12px"><span class="chip"><img src="logos/react.svg" alt="">React 19</span><span class="chip"><img src="logos/vite.svg" alt="">Vite</span><span class="chip"><img src="logos/typescript.svg" alt="">TypeScript</span><span class="chip">Recharts</span><span class="chip">force-graph</span><span class="chip"><img src="logos/vercel.svg" alt="">Vercel</span></div>
+</div>
+
+<div class="arrowrow"><span>REST · JSON · signed session</span></div>
+
+<div class="band b2"><div class="t">02 · FRAMEWORK</div><div class="seal">SHA-256 SEALED LOG · /integrity/verify</div>
+  <div class="row" style="grid-template-columns:1.25fr 1fr 1.15fr 1fr">
+    <div class="node"><b>Collect</b><small>handles, searches, groups, subreddits, videos, pages · since_id sync · reply trees</small>
+      <div class="chips"><span class="chip"><img src="logos/x.svg" alt="">X</span><span class="chip"><img src="logos/telegram.svg" alt="">Telegram</span><span class="chip"><img src="logos/reddit.svg" alt="">Reddit</span><span class="chip"><img src="logos/youtube.svg" alt="">YouTube</span><span class="chip"><img src="logos/instagram.svg" alt="">Instagram</span><span class="chip"><img src="logos/facebook.svg" alt="">Facebook</span></div></div>
+    <div class="node"><b>One timeline</b><small>messages · users · sources · threads · "platform:id" keys · 64-bit ids exact</small>
+      <div class="chips"><span class="chip"><img src="logos/sqlite.svg" alt="">SQLite WAL</span><span class="chip">db:snapshot</span></div></div>
+    <div class="node"><b>Label</b><small>batched, fixed vocabularies: sentiment · emotion · sarcasm · stance · topic · demographics</small>
+      <div class="chips"><span class="chip"><img src="logos/openai.svg" alt="">Azure OpenAI</span><span class="chip"><img src="logos/ollama.svg" alt="">Ollama on-prem</span><span class="chip">eval --check</span></div></div>
+    <div class="node"><b>Compute</b><small>PageRank · Louvain · Holt · burst z · coordination · origin</small>
+      <div class="chips"><span class="chip">graphology</span><span class="chip">arithmetic, no model</span></div></div>
+  </div>
+  <div class="chips" style="margin-top:12px"><span class="chip"><img src="logos/nodedotjs.svg" alt="">Node 22</span><span class="chip"><img src="logos/typescript.svg" alt="">TypeScript</span><span class="chip"><img src="logos/express.svg" alt="">Express</span><span class="chip">one process · cycle every 5 min</span><span class="chip">13 tests</span><span class="chip"><img src="logos/railway.svg" alt="">Railway</span></div>
+</div>
+
+<div class="arrowrow"><span>keys stay in .env · budget guard on paid collectors</span></div>
+
+<div class="band b1"><div class="t">03 · UPSTREAM</div>
+  <div class="row" style="grid-template-columns:repeat(4,1fr)">
+    <div class="node"><b>Apify</b><small>X · Instagram · Facebook scrapers · $0.40 / 1k tweets · monthly cap</small></div>
+    <div class="node"><b>MTProto</b><small>Telegram public groups, one session</small></div>
+    <div class="node"><b>Official APIs</b><small>Reddit OAuth · YouTube Data v3 · free</small></div>
+    <div class="node"><b>Model host</b><small>Azure deployment for the demo · Ollama when nothing may leave the network</small></div>
+  </div>
+</div>
+
+<div class="foot"><span>SIH26152 · Sentinel · Team Localhost:3712</span><span>Logos: Simple Icons (CC0)</span></div>

@@ -134,7 +134,7 @@ export function BarList({ rows, total }: { rows: { label: string; count: number 
 }
 
 /** Tiny inline trend line (plain SVG, no axes). Optional dashed forecast tail. */
-export function Spark({ values, forecast = [], width = 120, height = 28 }: { values: number[]; forecast?: number[]; width?: number; height?: number }) {
+export function Spark({ values, forecast = [], width = 120, height = 28, color = "var(--accent)" }: { values: number[]; forecast?: number[]; width?: number; height?: number; color?: string }) {
   const all = [...values, ...forecast];
   const max = Math.max(1, ...all);
   const x = (i: number) => (i / Math.max(1, all.length - 1)) * (width - 4) + 2;
@@ -147,8 +147,8 @@ export function Spark({ values, forecast = [], width = 120, height = 28 }: { val
     : "";
   return (
     <svg width={width} height={height} aria-hidden style={{ display: "block" }}>
-      <path d={line} fill="none" stroke="var(--g1)" strokeWidth={1.5} strokeLinejoin="round" />
-      {tail && <path d={tail} fill="none" stroke="var(--g3)" strokeWidth={1.5} strokeDasharray="3 3" />}
+      <path d={line} fill="none" stroke={color} strokeWidth={1.6} strokeLinejoin="round" />
+      {tail && <path d={tail} fill="none" stroke={color} strokeOpacity={0.55} strokeWidth={1.6} strokeDasharray="3 3" />}
     </svg>
   );
 }
