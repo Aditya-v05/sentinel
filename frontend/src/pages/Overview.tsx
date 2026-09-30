@@ -53,6 +53,12 @@ function Briefing({ qs }: { qs: string }) {
   const [data, setData] = useState<{ headline: string; bullets: string[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Generate on arrival: the briefing is the headline read, not an optional extra. Cached
+  // ten minutes server-side, so revisits cost nothing.
+  useEffect(() => {
+    void run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qs]);
   useEffect(() => setData(null), [qs]);
 
   const run = async () => {

@@ -29,7 +29,7 @@ const write = (key: string, value: unknown) => {
 
 export function FiltersProvider({ children }: { children: ReactNode }) {
   const [source, setSourceState] = useState<number | null>(() => read("filter.source", null));
-  const [days, setDaysState] = useState<number>(() => read("filter.days", 7));
+  const [days, setDaysState] = useState<number>(() => read("filter.days", 30));
   const setSource = (s: number | null) => (setSourceState(s), write("filter.source", s));
   const setDays = (d: number) => (setDaysState(d), write("filter.days", d));
   const qs = `?days=${days}${source ? `&source=${source}` : ""}`;

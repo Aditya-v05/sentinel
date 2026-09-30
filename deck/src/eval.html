@@ -1,0 +1,66 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Sentinel — labeller accuracy</title>
+<style>
+  :root{--ink:#0b0b0b;--ink2:#52514e;--ink3:#8a8984;--rule:#e3e1db;--bg:#fff;--green:#2fb85e;--green-bg:#eafbea}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:Inter,"Helvetica Neue",Arial,sans-serif;color:var(--ink);width:2200px;height:1000px;padding:56px 64px;position:relative}
+  .mono{font-family:"JetBrains Mono",Menlo,Consolas,monospace}
+  h1{margin:0;font-size:46px;font-weight:700;letter-spacing:-.015em}
+  .sub{margin:8px 0 0;font-size:22px;color:var(--ink2)}
+  .grid{display:grid;grid-template-columns:1fr 560px;gap:40px;margin-top:30px;height:760px}
+  .chart{border:2.5px solid var(--rule);border-radius:22px;padding:24px 28px 20px;position:relative}
+  .chart .h{display:flex;justify-content:space-between;align-items:baseline}
+  .chart .h b{font-size:22px;font-weight:700}
+  .legend{display:flex;gap:18px;font-size:16px;color:var(--ink2)}
+  .legend i{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  svg{width:100%;height:calc(100% - 40px);display:block}
+  .lab{font-size:22px;font-weight:700;fill:#0b0b0b}
+  .sublab{font-size:15px;fill:#8a8984;font-family:"JetBrains Mono",Menlo,monospace}
+  .val{font-size:17px;font-weight:700;fill:#fff;font-family:"JetBrains Mono",Menlo,monospace}
+  .valo{font-size:16px;font-weight:700;fill:#52514e;font-family:"JetBrains Mono",Menlo,monospace}
+  .tick{font-size:15px;fill:#8a8984;font-family:"JetBrains Mono",Menlo,monospace}
+  .stats{display:grid;grid-template-rows:repeat(3,1fr);gap:20px}
+  .stat{border:2.5px solid var(--rule);border-radius:22px;padding:24px 30px;display:flex;flex-direction:column;justify-content:center;background:#fafaf8}
+  .stat .n{font-size:15px;letter-spacing:.18em;font-weight:700;color:var(--ink3)}
+  .stat .big{font-size:60px;font-weight:800;letter-spacing:-.02em;line-height:1.05;margin:8px 0 8px}
+  .stat .d{font-size:20px;color:var(--ink2);line-height:1.35}
+  .stat.hot{border-color:var(--green);background:var(--green-bg)} .stat.hot .big{color:#103621}
+  .foot{position:absolute;left:64px;right:64px;bottom:26px;font-size:15px;color:var(--ink3);display:flex;justify-content:space-between}
+</style>
+<h1>Measured, not promised: what the labeller gets right</h1>
+<p class="sub">Same prompt, same model, same code path as the dashboard, scored on public labelled tweets before any of it went on a slide.</p>
+<div class="grid">
+  <div class="chart">
+    <div class="h"><b>Accuracy per dimension against the obvious alternatives</b>
+      <div class="legend"><span><i style="background:#0b0b0b"></i>Sentinel (gpt-5.6-terra)</span><span><i style="background:#b9b7b0"></i>Dictionary (AFINN)</span><span><i style="background:#dedcd6"></i>Always the majority class</span></div></div>
+    <svg viewBox="0 0 1480 690">
+      <g>
+        <line x1="380" y1="30" x2="380" y2="640" stroke="#ecebe6" stroke-width="2"/><text class="tick" x="380" y="668" text-anchor="middle">0%</text>
+        <line x1="640" y1="30" x2="640" y2="640" stroke="#ecebe6" stroke-width="2"/><text class="tick" x="640" y="668" text-anchor="middle">25%</text>
+        <line x1="900" y1="30" x2="900" y2="640" stroke="#ecebe6" stroke-width="2"/><text class="tick" x="900" y="668" text-anchor="middle">50%</text>
+        <line x1="1160" y1="30" x2="1160" y2="640" stroke="#ecebe6" stroke-width="2"/><text class="tick" x="1160" y="668" text-anchor="middle">75%</text>
+        <line x1="1420" y1="30" x2="1420" y2="640" stroke="#ecebe6" stroke-width="2"/><text class="tick" x="1420" y="668" text-anchor="middle">100%</text>
+      </g>
+      <g><text class="lab" x="0" y="96">Irony &amp; sarcasm</text><text class="sublab" x="0" y="122">TweetEval irony · n=200</text>
+        <rect x="380" y="76" width="983" height="30" rx="6" fill="#0b0b0b"/><text class="val" x="1353" y="97" text-anchor="end">94.5%</text>
+        <rect x="380" y="110" width="593" height="18" rx="5" fill="#dedcd6"/><text class="valo" x="983" y="124">57%</text></g>
+      <g><text class="lab" x="0" y="246">Emotion</text><text class="sublab" x="0" y="272">TweetEval emotion · n=200</text>
+        <rect x="380" y="226" width="749" height="30" rx="6" fill="#0b0b0b"/><text class="val" x="1119" y="247" text-anchor="end">72.0%</text>
+        <rect x="380" y="260" width="348" height="18" rx="5" fill="#dedcd6"/><text class="valo" x="738" y="274">34%</text></g>
+      <g><text class="lab" x="0" y="396">Stance</text><text class="sublab" x="0" y="422">TweetEval stance · n=169</text>
+        <rect x="380" y="376" width="788" height="30" rx="6" fill="#0b0b0b"/><text class="val" x="1158" y="397" text-anchor="end">75.7%</text>
+        <rect x="380" y="410" width="757" height="18" rx="5" fill="#dedcd6"/><text class="valo" x="1147" y="424">73%</text></g>
+      <g><text class="lab" x="0" y="536">Sentiment</text><text class="sublab" x="0" y="562">TweetEval sentiment · n=200</text>
+        <rect x="380" y="516" width="624" height="30" rx="6" fill="#0b0b0b"/><text class="val" x="994" y="537" text-anchor="end">60.0%</text>
+        <rect x="380" y="550" width="567" height="18" rx="5" fill="#b9b7b0"/><text class="valo" x="957" y="564">55%</text>
+        <rect x="380" y="572" width="484" height="18" rx="5" fill="#dedcd6"/><text class="valo" x="874" y="586">47%</text></g>
+    </svg>
+  </div>
+  <div class="stats">
+    <div class="stat hot"><div class="n">IRONY DETECTION</div><div class="big">94.5%</div><div class="d">The hardest thing in the brief, and the strongest number. Sarcastic praise is scored as negative, judged with the post it replies to.</div></div>
+    <div class="stat"><div class="n">FROZEN FLOORS</div><div class="big">4</div><div class="d"><span class="mono">npm run eval -- --check</span> fails the build when any dimension drops below its floor. Floors only ever go up.</div></div>
+    <div class="stat"><div class="n">HONEST READ</div><div class="big">+5 pts</div><div class="d">Sentiment beats a plain dictionary by five points on a three-way split. Stance barely beats always answering "none". Both are on the slide anyway.</div></div>
+  </div>
+</div>
+<div class="foot"><span>SIH26152 · Sentinel</span><span>Run of 28 Sep 2026, azure/gpt-5.6-terra, reasoning effort low, 200 fixed-seed samples per task from TweetEval (Barbieri et al., EMNLP 2020). eval/results/latest.json</span></div>

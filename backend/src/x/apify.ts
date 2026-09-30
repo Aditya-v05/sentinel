@@ -28,7 +28,14 @@ export const budgetLeft = () => Math.max(0, config.x.monthlyBudgetUsd - spendThi
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${BASE}${path}${path.includes("?") ? "&" : "?"}token=${config.x.apifyToken}`;
   const res = await fetch(url, { ...init, headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
-  if (!res.ok) throw new Error(`Apify ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  if (!res.ok) {
+    const body = (await res.text()).slice(0, 300);
+    // The plan's own cap, hit before our budget: a state to wait out, not a failure to retry.
+    if (res.status === 403 && /usage hard limit|platform-feature-disabled/i.test(body)) {
+      throw new ApifyBudgetError("Apify plan's monthly usage limit reached; collection resumes when the billing cycle resets or the limit is raised");
+    }
+    throw new Error(`Apify ${res.status}: ${body.slice(0, 200)}`);
+  }
   return (await res.json()) as T;
 }
 

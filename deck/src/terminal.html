@@ -1,0 +1,97 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Sentinel — the backend, working</title>
+<style>
+  :root{--bg:#fff;--ink:#0b0b0b;--ink2:#52514e;--ink3:#8a8984;--rule:#e3e1db}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:Inter,"Helvetica Neue",Arial,sans-serif;color:var(--ink);width:2400px;height:1240px;padding:52px 64px;position:relative}
+  h1{margin:0;font-size:46px;font-weight:700;letter-spacing:-.015em}
+  .sub{margin:8px 0 0;font-size:22px;color:var(--ink2)}
+  .grid{display:grid;grid-template-columns:1.15fr 1fr;grid-template-rows:1fr 1fr;gap:26px;margin-top:28px;height:1010px}
+  .term{background:#121212;border-radius:18px;padding:0;overflow:hidden;display:flex;flex-direction:column;border:2px solid #2a2a2a}
+  .bar{display:flex;align-items:center;gap:8px;padding:12px 16px;background:#1c1c1c;border-bottom:1px solid #2a2a2a}
+  .bar i{width:12px;height:12px;border-radius:50%;background:#3a3a3a}
+  .bar span{margin-left:10px;font-size:14px;color:#8a8984;font-family:"JetBrains Mono",Menlo,monospace}
+  pre{margin:0;padding:18px 22px;font-family:"JetBrains Mono",Menlo,Consolas,monospace;font-size:15px;line-height:1.42;color:#d6d4cc;white-space:pre-wrap;overflow:hidden;flex:1}
+  .p{color:#8a8984}.c{color:#fff;font-weight:700}.ok{color:#5fd38a}.warn{color:#e0a119}.err{color:#ff6b6b}.dim{color:#6f6e69}.k{color:#9fc5ff}.t{color:#6f6e69}
+  .cap{position:absolute;font-size:15px;color:var(--ink3)}
+  .foot{position:absolute;left:64px;right:64px;bottom:22px;font-size:15px;color:var(--ink3);display:flex;justify-content:space-between}
+</style>
+<h1>The framework runs in a terminal. The dashboard is one client of it.</h1>
+<p class="sub">Four things an analyst can do without opening a browser: watch a collection cycle, verify the log, check the labeller against frozen floors, and pull a report.</p>
+<div class="grid">
+  <div class="term"><div class="bar"><i></i><i></i><i></i><span>backend — npm run dev · one collection cycle</span></div>
+<pre><span class="p">$</span> <span class="c">npm run dev</span>
+<span class="dim">API listening on http://localhost:4000</span>
+<span class="t">12:02:11</span>  Collecting X @isro
+<span class="t">12:02:34</span>  Collected 14 new posts from X @isro
+<span class="t">12:03:02</span>  Collected 120 new posts from X “chandrayaan”
+<span class="t">12:03:41</span>  Stored 116 X replies
+<span class="t">12:03:41</span>  Collecting instagram @isro.dos
+<span class="t">12:04:05</span>  Collected 190 new items from instagram @isro.dos
+<span class="t">12:04:19</span>  Collected 22 new items from facebook ISRO
+<span class="t">12:04:28</span>  Collected 100 new posts from r/isro
+<span class="t">12:05:56</span>  Collected 1886 new comments from ISRO Official
+<span class="t">12:05:57</span>  <span class="ok">Sealed 2448 new entries into the collection log</span>
+<span class="t">12:05:57</span>  Topic discovery: 20 done
+<span class="t">12:06:40</span>  Sentiment analysis: 200 done          <span class="dim">azure/gpt-5.6-terra</span>
+<span class="t">12:07:02</span>  Demographic profiling: 40 done
+<span class="dim">idle · next run in 15 s (backlog 2248)</span></pre></div>
+
+  <div class="term"><div class="bar"><i></i><i></i><i></i><span>backend — npm run verify · tamper test</span></div>
+<pre><span class="p">$</span> <span class="c">npm run verify</span>
+<span class="ok">intact: 3677 sealed entries</span>
+
+<span class="p">$</span> <span class="c">sqlite3 data/analytics.db "update messages set text = text || ' (edited)' where id = 50"</span>
+
+<span class="p">$</span> <span class="c">npm run verify</span>
+<span class="err">BROKEN at row 50: content does not match its seal:
+this row was altered after collection</span>
+
+<span class="p">$</span> <span class="c">sqlite3 data/analytics.db "delete from messages where id = 60"</span>
+
+<span class="p">$</span> <span class="c">npm run verify</span>
+<span class="err">BROKEN at row 61: previous-hash link does not match:
+a row before this one was altered, removed, or reordered</span>
+
+<span class="p">$</span> <span class="c">curl -s localhost:4000/api/integrity/verify</span>   <span class="dim"># public, no sign-in</span>
+{"entries":3677,"intact":true,"brokenAt":null,"unsealed":0,
+ "head":"a7b3496717d34e9aae711cddb8628932fd7453543d0b3970…"}</pre></div>
+
+  <div class="term"><div class="bar"><i></i><i></i><i></i><span>backend — npm run eval -- --check · npm test</span></div>
+<pre><span class="p">$</span> <span class="c">npm run eval -- --check</span>
+<span class="dim">model azure/gpt-5.6-terra · 200 TweetEval samples per task</span>
+sentiment  n=200  accuracy <span class="k">0.600</span>  macro-F1 0.588  <span class="dim">(majority 0.465, lexicon 0.545)</span>
+emotion    n=200  accuracy <span class="k">0.720</span>  macro-F1 0.721  <span class="dim">(majority 0.335)</span>
+irony      n=200  accuracy <span class="k">0.945</span>  macro-F1 0.944  <span class="dim">(majority 0.570)</span>
+stance     n=169  accuracy <span class="k">0.757</span>  macro-F1 0.657  <span class="dim">(majority 0.728)</span>
+written eval/results/2026-09-28T08-23-39-404Z.json
+<span class="ok">all thresholds held</span>
+
+<span class="p">$</span> <span class="c">npm test</span>
+<span class="ok">✔</span> sealing chains every row and verify holds; an edit and a deletion are each named
+<span class="ok">✔</span> a tweet is stored once, with a 64-bit id kept exact and its author, mentions and hashtags
+<span class="ok">✔</span> coordination finds the same wording from several accounts within minutes
+<span class="ok">✔</span> the right password yields a token, the wrong one nothing, and tampering is rejected
+<span class="ok">✔</span> forecast follows recent buckets; burst fires on one anomalous bucket
+<span class="dim">… 8 more</span>
+<span class="dim">ℹ tests 13 · pass 13 · fail 0 · 146 ms</span></pre></div>
+
+  <div class="term"><div class="bar"><i></i><i></i><i></i><span>any client — the API</span></div>
+<pre><span class="p">$</span> <span class="c">curl -s "localhost:4000/api/export?days=30&amp;dataset=report" | jq 'keys'</span>
+["audience","coordination","generated_at","network","overview",
+ "range","sentiment","spread","trends"]
+
+<span class="p">$</span> <span class="c">curl -s "localhost:4000/api/origin?days=30&amp;term=chandrayaan" | jq '.first[0], .segments[:2]'</span>
+{ "author": "@SatyaRayPradhan", "platform": "x", "ts": 1788512528,
+  "text": "@isro Common ISRO. This is no your tru potential…" }
+[ { "key": 0, "delaySec": 0,       "count": 2  },
+  { "key": 2, "delaySec": 1480980, "count": 21 } ]
+
+<span class="p">$</span> <span class="c">curl -s "localhost:4000/api/coordination?days=30" | jq '.bursts[0] | {authorCount, tightestSpanSec}'</span>
+{ "authorCount": 5, "tightestSpanSec": 430 }      <span class="dim"># 5 accounts, 7 minutes, same wording</span>
+
+<span class="p">$</span> <span class="c">curl -s "localhost:4000/api/export?days=30&amp;dataset=messages" -o messages.csv</span>
+<span class="dim">4,084 rows · id, platform, author, time, text, reply_to, sentiment, emotion, sarcasm, stance, topic, seal</span></pre></div>
+</div>
+<div class="foot"><span>SIH26152 · Sentinel · Team Localhost:3712</span><span>Every line is real output from the 28 Sep 2026 run on the collected data (3,677 messages, 6 platforms); the two tamper lines were produced by editing and deleting a row and restoring both.</span></div>

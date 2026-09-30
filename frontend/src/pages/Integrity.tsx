@@ -153,9 +153,11 @@ export default function Integrity() {
 
 function Origin({ topics }: { topics: Topic[] }) {
   const { qs } = useFilters();
-  const [term, setTerm] = useState("");
+  // ?term=… in the address bar pre-fills and runs a trace, so a finding can be linked to.
+  const initial = new URLSearchParams(window.location.search).get("term") ?? "";
+  const [term, setTerm] = useState(initial);
   const [topic, setTopic] = useState<number | "">("");
-  const [query, setQuery] = useState<string | null>(null);
+  const [query, setQuery] = useState<string | null>(initial ? `term=${encodeURIComponent(initial)}` : null);
   const { data, error } = useApi<OriginData>(query ? `/origin${qs}&${query}` : null);
 
   const submit = (e: FormEvent) => {
